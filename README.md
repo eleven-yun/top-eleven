@@ -1,7 +1,28 @@
 # top_eleven
 
+> **Note**: The project focus is now a **football-only, pre-match lottery prediction
+> system**. See [docs/design.md](docs/design.md) for the updated design and
+> [docs/milestones.md](docs/milestones.md) for the phased execution plan.
+
 ## Objective
-This project aims to learn a model that predicts the outcome of a football game, based on information of the two teams that are going to play the game.
+This project builds pre-match models that output calibrated probabilities and map
+them to football lottery play types.
+
+Current target play types:
+
+- Fulltime 1X2
+- Halftime/Fulltime 1X2
+- Handicap 1X2
+
+Label definition note: fulltime means 90 minutes plus stoppage/injury time,
+excluding extra time and penalty shootouts.
+
+The first implementation prioritizes simplicity: pre-match features only, no live
+streaming inputs.
+
+### Original Objective (pre-match, three-class)
+The original formulation aimed to predict the outcome of a football game based on
+information of the two teams available before kick-off.
 
 ```mermaid
 graph LR;
@@ -27,6 +48,15 @@ graph LR;
     pred--P(B)-->team2_win;
     pred--P(C)-->draw;
 ```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/design.md](docs/design.md) | Problem definition, data schema, model architecture, repo structure |
+| [docs/milestones.md](docs/milestones.md) | Phased execution plan with per-task checklist and decision gates |
+
+---
 
 ## Problem Formulation
 
@@ -122,7 +152,8 @@ graph LR
 
 
 ## The Folder Structure
-The files of this project are organized as follows:
+
+### Current (prototype)
 ```shell
 .
 ├── data
@@ -132,10 +163,49 @@ The files of this project are organized as follows:
 │   ├── embedding
 │   ├── encoder
 │   └── transformer
+├── docs
+│   ├── design.md
+│   └── milestones.md
 ├── README.md
 ├── scripts
 │   ├── eval.py
 │   ├── test.py
 │   └── train.py
 └── utils
+```
+
+### Target (see [docs/design.md](docs/design.md) Section 8)
+```shell
+.
+├── config/
+│   ├── config.json
+│   ├── data_config.json
+│   ├── feature_config.json
+│   └── experiment_config.json
+├── data/
+│   ├── raw/
+│   ├── processed/
+│   ├── schemas.py
+│   ├── build_dataset.py
+│   └── data_loader.py
+├── nn_modules/
+│   ├── encoders/
+│   ├── fusion/
+│   ├── heads/
+│   └── multimodal/
+├── scripts/
+│   ├── build_dataset.py
+│   ├── train_baseline.py
+│   ├── train_multimodal.py
+│   ├── eval.py
+│   └── infer_live.py
+├── utils/
+│   ├── metrics.py
+│   ├── calibration.py
+│   ├── split.py
+│   └── logging.py
+├── docs/
+│   ├── design.md
+│   └── milestones.md
+└── README.md
 ```
