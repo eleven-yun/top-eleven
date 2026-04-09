@@ -58,6 +58,37 @@ graph LR;
 
 ---
 
+## Environment Setup (Conda Only)
+
+This project currently uses a conda-first workflow for local development.
+For now, use conda as the single source of truth for dependencies.
+
+Create and activate the environment:
+
+```bash
+conda env create -f environment.yml
+conda activate top-eleven
+```
+
+Update the environment after dependency changes:
+
+```bash
+conda env update -f environment.yml --prune
+```
+
+Remove the environment (if needed):
+
+```bash
+conda env remove -n top-eleven
+```
+
+Notes:
+- Keep dependencies in `environment.yml` up to date when adding packages.
+- Use one shared environment name: `top-eleven`.
+- Docker is intentionally deferred until later phases.
+
+---
+
 ## Problem Formulation
 
 This is essentially a multi-class classification problem, where the number of classes $K=3$.

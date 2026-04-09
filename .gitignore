@@ -1,3 +1,10 @@
 __pycache__/
 *.pt
 *.pth
+
+# local envs
+.venv/
+venv/
+.conda/
+.mamba/
+env/

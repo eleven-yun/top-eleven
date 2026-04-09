@@ -1,0 +1,17 @@
+name: top-eleven
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  - pyyaml
+  - tqdm
+  - pytorch
+  - cpuonly
+  - pytest
+  - ipykernel
