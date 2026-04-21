@@ -2,6 +2,10 @@ __pycache__/
 *.pt
 *.pth
 
+# generated data artifacts — regenerate via build_dataset.py
+data/raw/
+data/processed/
+
 # local envs
 .venv/
 venv/
