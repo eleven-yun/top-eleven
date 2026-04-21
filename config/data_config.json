@@ -1,6 +1,7 @@
 {
   "source": {
-    "provider": "statsbombpy",
+    "provider": "football-data.co.uk",
+    "base_url": "https://www.football-data.co.uk/mmz4281",
     "cache_raw": true,
     "retry_count": 3,
     "retry_sleep_seconds": 2
@@ -9,6 +10,7 @@
     {
       "country_name": "England",
       "competition_name": "Premier League",
+      "league_code": "E0",
       "season_names": [
         "2022/2023",
         "2023/2024",
@@ -19,6 +21,7 @@
     {
       "country_name": "England",
       "competition_name": "Championship",
+      "league_code": "E1",
       "season_names": [
         "2022/2023",
         "2023/2024",
@@ -31,8 +34,9 @@
     {
       "country_name": "England",
       "competition_name": "Premier League",
+      "league_code": "E0",
       "season_names": [
-        "2015/2016"
+        "2022/2023"
       ],
       "division_level": 1
     }
@@ -49,13 +53,12 @@
     ]
   },
   "paths": {
-    "raw_dir": "data/raw/statsbombpy",
+    "raw_dir": "data/raw/football_data_co_uk",
     "processed_dir": "data/processed"
   },
   "build_options": {
     "strict_requested_seasons": false,
     "use_validation_fallback_if_missing": true,
-    "fetch_events": false,
     "write_raw_payloads": true,
     "include_placeholder_markets": true,
     "default_handicap_line": 0
