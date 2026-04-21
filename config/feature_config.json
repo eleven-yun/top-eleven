@@ -1,0 +1,28 @@
+{
+  "feature_sets": {
+    "tier_a_enabled": true,
+    "tier_b_enabled": false
+  },
+  "prematch_fields": {
+    "league_position": true,
+    "points_last_5": true,
+    "goals_scored_last_5": true,
+    "goals_conceded_last_5": true,
+    "elo_rating": true,
+    "lineup": true,
+    "formation": true,
+    "h2h_wins_last_5": true,
+    "promoted_this_season": true,
+    "relegated_last_season": true,
+    "seasons_in_current_division": true,
+    "division_level_current": true,
+    "division_level_last_season": true,
+    "team_strength_prior": true,
+    "strength_gap_vs_division_avg": true
+  },
+  "defaults": {
+    "missing_lineup": [],
+    "missing_formation": null,
+    "missing_numeric": 0
+  }
+}

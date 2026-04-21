@@ -1,0 +1,63 @@
+{
+  "source": {
+    "provider": "statsbombpy",
+    "cache_raw": true,
+    "retry_count": 3,
+    "retry_sleep_seconds": 2
+  },
+  "requested_competitions": [
+    {
+      "country_name": "England",
+      "competition_name": "Premier League",
+      "season_names": [
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 1
+    },
+    {
+      "country_name": "England",
+      "competition_name": "Championship",
+      "season_names": [
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 2
+    }
+  ],
+  "validation_fallback_competitions": [
+    {
+      "country_name": "England",
+      "competition_name": "Premier League",
+      "season_names": [
+        "2015/2016"
+      ],
+      "division_level": 1
+    }
+  ],
+  "season_split": {
+    "train": [
+      "2022/2023"
+    ],
+    "validation": [
+      "2023/2024"
+    ],
+    "test": [
+      "2024/2025"
+    ]
+  },
+  "paths": {
+    "raw_dir": "data/raw/statsbombpy",
+    "processed_dir": "data/processed"
+  },
+  "build_options": {
+    "strict_requested_seasons": false,
+    "use_validation_fallback_if_missing": true,
+    "fetch_events": false,
+    "write_raw_payloads": true,
+    "include_placeholder_markets": true,
+    "default_handicap_line": 0
+  }
+}

@@ -15,3 +15,6 @@ dependencies:
   - cpuonly
   - pytest
   - ipykernel
+  - pip:
+      - statsbombpy==1.18.0
+
