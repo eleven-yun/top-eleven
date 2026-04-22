@@ -12,6 +12,7 @@
       "competition_name": "Premier League",
       "league_code": "E0",
       "season_names": [
+        "2021/2022",
         "2022/2023",
         "2023/2024",
         "2024/2025"
@@ -23,6 +24,7 @@
       "competition_name": "Championship",
       "league_code": "E1",
       "season_names": [
+        "2021/2022",
         "2022/2023",
         "2023/2024",
         "2024/2025"
@@ -43,6 +45,7 @@
   ],
   "season_split": {
     "train": [
+      "2021/2022",
       "2022/2023"
     ],
     "validation": [
