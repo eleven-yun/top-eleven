@@ -1,6 +1,7 @@
 name: top-eleven
 channels:
   - pytorch
+  - nvidia
   - conda-forge
   - defaults
 dependencies:
@@ -12,7 +13,7 @@ dependencies:
   - pyyaml
   - tqdm
   - pytorch
-  - cpuonly
+  - pytorch-cuda=12.1
   - pytest
   - ipykernel
   - pip:
