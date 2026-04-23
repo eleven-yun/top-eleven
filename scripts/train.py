@@ -2,6 +2,7 @@ import math
 import time
 import os
 import sys
+from pathlib import Path
 
 import json
 import torch
@@ -26,8 +27,31 @@ os.chdir(cwd)
 
 # import local functions
 from nn_modules.transformer.top_former import TopFormer
-from data.data_loader import train_data_loader, validation_data_loader, preprocess
+from data.data_loader import create_transformer_prematch_data_loaders, preprocess
 from utils.helper import count_parameters, initialize_weights, epoch_time
+
+data_config_full_path = os.path.join(root_full_path, 'config/data_config.json')
+if not os.path.exists(data_config_full_path):
+    print(f"{data_config_full_path} doesn't exist.")
+    exit(0)
+with open(data_config_full_path, 'r') as file:
+    data_config = json.load(file)
+
+processed_dir = os.path.join(root_full_path, data_config["paths"]["processed_dir"])
+train_data_loader, validation_data_loader, split_samples = create_transformer_prematch_data_loaders(
+    processed_dir=processed_dir,
+    season_split=data_config["season_split"],
+    source_length=top_config["model_params"]["source_length"],
+    target_length=top_config["model_params"]["target_length"],
+    d_model=top_config["model_params"]["d_model"],
+    batch_size=top_config["train_params"]["batch_size"],
+    label_key="fulltime_label",
+)
+
+if len(split_samples.get("train", [])) == 0 or len(split_samples.get("validation", [])) == 0:
+    raise ValueError(
+        "Empty train/validation split. Check config/data_config.json season_split and processed dataset."
+    )
 
 model = TopFormer(
     num_layers=top_config["model_params"]["num_layers"],
@@ -54,7 +78,7 @@ scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
 loss = nn.CrossEntropyLoss()
 
 
-def train(model, data_loader, optimizer, loss_function, device='cpu'):
+def train(model, data_loader, optimizer, loss_function, device='cuda'):
     """The interface to train the model using training data.
 
     Parameters
@@ -69,7 +93,7 @@ def train(model, data_loader, optimizer, loss_function, device='cpu'):
     loss_function : Loss nn.CrossEntropyLoss
         The loss function as objective and constraint for learning model parameters.
     device : str, optional
-        The computing device for training the model (default: 'cpu').
+        The computing device for training the model (default: 'cuda').
 
     Returns
     -------
@@ -81,10 +105,14 @@ def train(model, data_loader, optimizer, loss_function, device='cpu'):
     model.to(device)
     for i, batch in enumerate(data_loader):
         x, u, gt = preprocess(batch)
+        x = x.to(device)
+        u = u.to(device)
+        gt = gt.to(device)
 
         optimizer.zero_grad()
         output = model(x, u)
-        loss = loss_function(torch.max(output, dim=0)[0], gt)
+        logits = output[-1]
+        loss = loss_function(logits, gt)
         loss.backward()
         optimizer.step()
 
@@ -97,7 +125,7 @@ def train(model, data_loader, optimizer, loss_function, device='cpu'):
     return epoch_loss / len(data_loader)
 
 
-def validate(model, data_loader, loss_function, device='cpu'):
+def validate(model, data_loader, loss_function, device='cuda'):
     """The interface to validate the model using validation data.
 
     Parameters
@@ -110,7 +138,7 @@ def validate(model, data_loader, loss_function, device='cpu'):
     loss_function : Loss nn.CrossEntropyLoss
         The loss function as a criterion for model validation.
     device : str, optional
-        The computing device for validating the model (default: 'cpu').
+        The computing device for validating the model (default: 'cuda').
 
     Returns
     -------
@@ -123,9 +151,13 @@ def validate(model, data_loader, loss_function, device='cpu'):
     with torch.no_grad():
         for _, batch in enumerate(data_loader):
             x, u, gt = preprocess(batch)
+            x = x.to(device)
+            u = u.to(device)
+            gt = gt.to(device)
             output = model(x, u)
 
-            loss = loss_function(torch.max(output, dim=0)[0], gt)
+            logits = output[-1]
+            loss = loss_function(logits, gt)
             epoch_loss += loss.item()
 
     return epoch_loss / len(data_loader)
@@ -142,10 +174,15 @@ def run(total_epoch: int, best_loss: float):
         The minimum bias between the ground truth and the predicted value.
     """
     train_losses, validation_losses = [], []
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(
+        f"Training on device={device}, train_samples={len(split_samples['train'])}, "
+        f"validation_samples={len(split_samples['validation'])}"
+    )
     for step in range(total_epoch):
         start_time = time.time()
-        train_loss = train(model, train_data_loader, optimizer, loss)
-        validation_loss = validate(model, validation_data_loader, loss)
+        train_loss = train(model, train_data_loader, optimizer, loss, device=device)
+        validation_loss = validate(model, validation_data_loader, loss, device=device)
         end_time = time.time()
 
         if step > top_config["train_params"]["warmup"]:
@@ -159,7 +196,7 @@ def run(total_epoch: int, best_loss: float):
             best_loss = validation_loss
             os.makedirs(top_config["train_params"]["save_path"], exist_ok=True)
             torch.save(model.state_dict(),
-                       'saved/top_eleven_{0}.pt'.format(validation_loss))
+                       os.path.join(top_config["train_params"]["save_path"], f"top_eleven_{validation_loss:.4f}.pt"))
 
         print(f'Epoch: {step + 1} | Time: {epoch_mins}m {epoch_secs}s')
         print(

@@ -30,10 +30,7 @@ class TopFormer(nn.Module):
         super(TopFormer, self).__init__()
         self.encoder = TopEncoder(num_layers, d_model, nhead)
         self.decoder = TopDecoder(num_layers, d_model, nhead)
-        self.output_layer = nn.Sequential(
-            nn.Linear(d_model, num_classes),
-            nn.Softmax(dim=-1)
-        )
+        self.output_layer = nn.Linear(d_model, num_classes)
 
     def forward(self, x, u):
         """Receives input sequences to encoder and decoder and output the classification probabilities.
