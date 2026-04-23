@@ -1,4 +1,5 @@
 
+import math
 import os
 import sys
 
@@ -221,3 +222,91 @@ def build_samples(prematch_records, match_meta_records, lottery_market_records=N
 def create_prematch_data_loader(samples, batch_size=32, shuffle=True):
     dataset = PreMatchLotteryDataset(samples)
     return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle)
+
+
+class TransformerPreMatchDataset(Dataset):
+    """Adapter dataset that maps tabular pre-match features into Transformer inputs."""
+
+    def __init__(self, samples, source_length, target_length, d_model, label_key="fulltime_label"):
+        self.samples = samples
+        self.source_length = source_length
+        self.target_length = target_length
+        self.d_model = d_model
+        self.label_key = label_key
+
+    def __len__(self):
+        return len(self.samples)
+
+    def _expand_features(self, features):
+        base = torch.tensor(features, dtype=torch.float32)
+        repeat_factor = math.ceil(self.d_model / base.numel())
+        expanded = base.repeat(repeat_factor)[: self.d_model]
+        return expanded
+
+    def __getitem__(self, idx):
+        sample = self.samples[idx]
+        expanded = self._expand_features(sample["features"])
+        x = expanded.unsqueeze(0).repeat(self.source_length, 1)
+        u = expanded.unsqueeze(0).repeat(self.target_length, 1)
+        gt = torch.tensor(sample.get(self.label_key, -1), dtype=torch.long)
+        return {
+            "match_id": sample["match_id"],
+            "x": x,
+            "u": u,
+            "gt": gt,
+        }
+
+
+def split_samples_by_season(samples, match_meta_records, season_split):
+    """Split samples by season definitions from config/data_config.json."""
+    season_by_match = {row["match_id"]: row["season"] for row in match_meta_records}
+    split_to_seasons = {name: set(seasons) for name, seasons in season_split.items()}
+
+    split_samples = {name: [] for name in split_to_seasons}
+    for sample in samples:
+        season = season_by_match.get(sample["match_id"])
+        if season is None:
+            continue
+        for split_name, seasons in split_to_seasons.items():
+            if season in seasons:
+                split_samples[split_name].append(sample)
+                break
+    return split_samples
+
+
+def create_transformer_prematch_data_loaders(
+    processed_dir,
+    season_split,
+    source_length,
+    target_length,
+    d_model,
+    batch_size=32,
+    label_key="fulltime_label",
+):
+    """Create train/validation loaders from processed JSONL data for Transformer training."""
+    prematch_records = load_json_or_jsonl(os.path.join(processed_dir, "prematch_features.jsonl"))
+    match_meta_records = load_json_or_jsonl(os.path.join(processed_dir, "match_meta.jsonl"))
+    lottery_market_records = load_json_or_jsonl(os.path.join(processed_dir, "lottery_market.jsonl"))
+
+    samples = build_samples(prematch_records, match_meta_records, lottery_market_records)
+    split_samples = split_samples_by_season(samples, match_meta_records, season_split)
+
+    train_dataset = TransformerPreMatchDataset(
+        split_samples.get("train", []),
+        source_length=source_length,
+        target_length=target_length,
+        d_model=d_model,
+        label_key=label_key,
+    )
+    validation_dataset = TransformerPreMatchDataset(
+        split_samples.get("validation", []),
+        source_length=source_length,
+        target_length=target_length,
+        d_model=d_model,
+        label_key=label_key,
+    )
+
+    train_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+    validation_loader = DataLoader(dataset=validation_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, validation_loader, split_samples
