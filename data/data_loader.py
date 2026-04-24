@@ -213,6 +213,10 @@ def build_samples(prematch_records, match_meta_records, lottery_market_records=N
                 "fulltime_label": fulltime_label,
                 "htft_label": htft_label,
                 "handicap_label": handicap_label,
+                "promoted_match": int(
+                    bool(record.get("home", {}).get("promoted_this_season", 0))
+                    or bool(record.get("away", {}).get("promoted_this_season", 0))
+                ),
             }
         )
 
@@ -254,6 +258,7 @@ class TransformerPreMatchDataset(Dataset):
             "x": x,
             "u": u,
             "gt": gt,
+            "promoted_match": torch.tensor(sample.get("promoted_match", 0), dtype=torch.long),
         }
 
 
@@ -310,3 +315,36 @@ def create_transformer_prematch_data_loaders(
     validation_loader = DataLoader(dataset=validation_dataset, batch_size=batch_size, shuffle=False)
 
     return train_loader, validation_loader, split_samples
+
+
+def create_transformer_prematch_loader_for_split(
+    processed_dir,
+    season_split,
+    split_name,
+    source_length,
+    target_length,
+    d_model,
+    batch_size=32,
+    label_key="fulltime_label",
+    shuffle=False,
+):
+    """Create a single split DataLoader (train/validation/test) for Transformer tasks."""
+    prematch_records = load_json_or_jsonl(os.path.join(processed_dir, "prematch_features.jsonl"))
+    match_meta_records = load_json_or_jsonl(os.path.join(processed_dir, "match_meta.jsonl"))
+    lottery_market_records = load_json_or_jsonl(os.path.join(processed_dir, "lottery_market.jsonl"))
+
+    samples = build_samples(prematch_records, match_meta_records, lottery_market_records)
+    split_samples = split_samples_by_season(samples, match_meta_records, season_split)
+
+    if split_name not in split_samples:
+        raise ValueError(f"Unknown split '{split_name}'. Available: {list(split_samples.keys())}")
+
+    dataset = TransformerPreMatchDataset(
+        split_samples.get(split_name, []),
+        source_length=source_length,
+        target_length=target_length,
+        d_model=d_model,
+        label_key=label_key,
+    )
+    loader = DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle)
+    return loader, split_samples

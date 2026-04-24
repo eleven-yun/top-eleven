@@ -11,6 +11,7 @@ os.chdir(cfp)
 sys.path.append(os.path.abspath(".."))
 from nn_modules.transformer.top_former import TopFormer
 from utils import top_helper
+from utils.checkpoint import load_checkpoint_state_dict
 os.chdir(cwd)
 
 top_former = TopFormer(num_layers=6, d_model=512, nhead=8, num_classes=3)
@@ -24,7 +25,7 @@ top_helper.check_model_file_path(model_file_path)
 # TODO: remove this line
 torch.save(top_former.state_dict(), model_file_path)
 
-top_former.load_state_dict(torch.load(model_file_path))
+top_former.load_state_dict(load_checkpoint_state_dict(model_file_path, device="cpu"))
 top_former.eval()
 
 # TODO: replace with real data

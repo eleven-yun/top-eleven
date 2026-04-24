@@ -1,81 +1,155 @@
+import argparse
+import json
 import math
-import time
 import os
 import sys
-from pathlib import Path
+import time
 
-import json
 import torch
-from torch.optim import Adam
 from torch import nn, optim
+from torch.optim import Adam
 
 top_config = {}
-cwd = os.getcwd()  # current working directory
-cfp = os.path.dirname(os.path.abspath(__file__))  # current file path
+data_config = {}
+cwd = os.getcwd()
+cfp = os.path.dirname(os.path.abspath(__file__))
 os.chdir(cfp)
 root_full_path = os.path.abspath("..")
 sys.path.append(root_full_path)
 
-# import configuration
-config_full_path = os.path.join(root_full_path, 'config/config.json')
-if not os.path.exists(config_full_path):
-    print(f"{config_full_path} doesn't exist.")
-    exit(0)
-with open(config_full_path, 'r') as file:
-    top_config = json.load(file)
-os.chdir(cwd)
-
-# import local functions
 from nn_modules.transformer.top_former import TopFormer
 from data.data_loader import create_transformer_prematch_data_loaders, preprocess
 from utils.helper import count_parameters, initialize_weights, epoch_time
 
-data_config_full_path = os.path.join(root_full_path, 'config/data_config.json')
+TASK_NUM_CLASSES = {
+    "fulltime_label": 3,
+    "htft_label": 9,
+    "handicap_label": 3,
+}
+
+
+def normalize_label_key(raw_label_key: str) -> str:
+    return raw_label_key.replace("-", "_")
+
+config_full_path = os.path.join(root_full_path, "config/config.json")
+if not os.path.exists(config_full_path):
+    print(f"{config_full_path} doesn't exist.")
+    exit(0)
+with open(config_full_path, "r", encoding="utf-8") as file:
+    top_config = json.load(file)
+
+data_config_full_path = os.path.join(root_full_path, "config/data_config.json")
 if not os.path.exists(data_config_full_path):
     print(f"{data_config_full_path} doesn't exist.")
     exit(0)
-with open(data_config_full_path, 'r') as file:
+with open(data_config_full_path, "r", encoding="utf-8") as file:
     data_config = json.load(file)
+os.chdir(cwd)
 
-processed_dir = os.path.join(root_full_path, data_config["paths"]["processed_dir"])
-train_data_loader, validation_data_loader, split_samples = create_transformer_prematch_data_loaders(
-    processed_dir=processed_dir,
-    season_split=data_config["season_split"],
-    source_length=top_config["model_params"]["source_length"],
-    target_length=top_config["model_params"]["target_length"],
-    d_model=top_config["model_params"]["d_model"],
-    batch_size=top_config["train_params"]["batch_size"],
-    label_key="fulltime_label",
-)
+task_label_key = "fulltime_label"
+model = None
+optimizer = None
+scheduler = None
+loss = None
+train_data_loader = None
+validation_data_loader = None
+split_samples = None
 
-if len(split_samples.get("train", [])) == 0 or len(split_samples.get("validation", [])) == 0:
-    raise ValueError(
-        "Empty train/validation split. Check config/data_config.json season_split and processed dataset."
+
+def get_checkpoint_output_dir():
+    train_params = top_config.get("train_params", {})
+    return train_params.get("output_dir", train_params.get("save_path", "./output"))
+
+
+def build_checkpoint_filename(label_key: str, epoch_num: int, validation_loss: float, run_timestamp: str) -> str:
+    return (
+        f"top_eleven-task={label_key}-epoch={epoch_num:03d}"
+        f"-val_loss={validation_loss:.4f}-ts={run_timestamp}.pt"
     )
 
-model = TopFormer(
-    num_layers=top_config["model_params"]["num_layers"],
-    d_model=top_config["model_params"]["d_model"],
-    nhead=top_config["model_params"]["nhead"],
-    num_classes=top_config["model_params"]["num_classes"])
+
+def build_checkpoint_metadata(
+    checkpoint_path: str,
+    label_key: str,
+    epoch_num: int,
+    validation_loss: float,
+    run_timestamp: str,
+    device: str,
+):
+    train_params = top_config.get("train_params", {})
+    optimize_params = train_params.get("optimize_params", {})
+    return {
+        "checkpoint_path": checkpoint_path,
+        "task": label_key,
+        "epoch": epoch_num,
+        "validation_loss": float(validation_loss),
+        "timestamp": run_timestamp,
+        "device": device,
+        "sample_counts": {
+            "train": len(split_samples.get("train", [])),
+            "validation": len(split_samples.get("validation", [])),
+        },
+        "train_params": {
+            "batch_size": train_params.get("batch_size"),
+            "warmup": train_params.get("warmup"),
+            "learning_rate": optimize_params.get("lr"),
+            "weight_decay": optimize_params.get("weight_decay"),
+            "eps": optimize_params.get("eps"),
+        },
+        "model_params": top_config.get("model_params", {}),
+        "label_mapping": TASK_NUM_CLASSES,
+    }
 
 
-# TODO(diwei): Remove this hint
-print(f'The model has {count_parameters(model)}: trainable parameters')
-model.apply(initialize_weights)
+def write_checkpoint_sidecar_json(checkpoint_path: str, metadata: dict):
+    sidecar_path = os.path.splitext(checkpoint_path)[0] + ".json"
+    with open(sidecar_path, "w", encoding="utf-8") as file:
+        json.dump(metadata, file, ensure_ascii=False, indent=2)
+    return sidecar_path
 
 
-# TODO(diwei): Adjust the type and parameters of the optimizer
-optimizer = Adam(params=model.parameters(),
-                 lr=top_config["train_params"]["optimize_params"]["lr"],
-                 weight_decay=top_config["train_params"]["optimize_params"]["weight_decay"],
-                 eps=top_config["train_params"]["optimize_params"]["eps"])
+def configure_for_task(label_key: str):
+    global task_label_key, model, optimizer, scheduler, loss, train_data_loader, validation_data_loader, split_samples
 
-scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer,
-                                                 verbose=True)
+    label_key = normalize_label_key(label_key)
 
-# TODO(diwei): Adjust the type and parameters of the loss
-loss = nn.CrossEntropyLoss()
+    if label_key not in TASK_NUM_CLASSES:
+        raise ValueError(f"Unknown label_key={label_key}. Available: {list(TASK_NUM_CLASSES.keys())}")
+
+    task_label_key = label_key
+    processed_dir = os.path.join(root_full_path, data_config["paths"]["processed_dir"])
+    train_data_loader, validation_data_loader, split_samples = create_transformer_prematch_data_loaders(
+        processed_dir=processed_dir,
+        season_split=data_config["season_split"],
+        source_length=top_config["model_params"]["source_length"],
+        target_length=top_config["model_params"]["target_length"],
+        d_model=top_config["model_params"]["d_model"],
+        batch_size=top_config["train_params"]["batch_size"],
+        label_key=label_key,
+    )
+
+    if len(split_samples.get("train", [])) == 0 or len(split_samples.get("validation", [])) == 0:
+        raise ValueError(
+            "Empty train/validation split. Check config/data_config.json season_split and processed dataset."
+        )
+
+    model = TopFormer(
+        num_layers=top_config["model_params"]["num_layers"],
+        d_model=top_config["model_params"]["d_model"],
+        nhead=top_config["model_params"]["nhead"],
+        num_classes=TASK_NUM_CLASSES[label_key],
+    )
+    print(f"The model has {count_parameters(model)}: trainable parameters")
+    model.apply(initialize_weights)
+
+    optimizer = Adam(
+        params=model.parameters(),
+        lr=top_config["train_params"]["optimize_params"]["lr"],
+        weight_decay=top_config["train_params"]["optimize_params"]["weight_decay"],
+        eps=top_config["train_params"]["optimize_params"]["eps"],
+    )
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer=optimizer)
+    loss = nn.CrossEntropyLoss()
 
 
 def train(model, data_loader, optimizer, loss_function, device='cuda'):
@@ -175,8 +249,11 @@ def run(total_epoch: int, best_loss: float):
     """
     train_losses, validation_losses = [], []
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    output_dir = get_checkpoint_output_dir()
+    run_timestamp = time.strftime("%Y%m%d-%H%M%S")
+    warmup_epochs = int(top_config["train_params"].get("warmup", 0))
     print(
-        f"Training on device={device}, train_samples={len(split_samples['train'])}, "
+        f"Training task={task_label_key} on device={device}, train_samples={len(split_samples['train'])}, "
         f"validation_samples={len(split_samples['validation'])}"
     )
     for step in range(total_epoch):
@@ -185,7 +262,7 @@ def run(total_epoch: int, best_loss: float):
         validation_loss = validate(model, validation_data_loader, loss, device=device)
         end_time = time.time()
 
-        if step > top_config["train_params"]["warmup"]:
+        if warmup_epochs <= 0 or (step + 1) > warmup_epochs:
             scheduler.step(validation_loss)
 
         train_losses.append(train_loss)
@@ -194,9 +271,26 @@ def run(total_epoch: int, best_loss: float):
 
         if validation_loss < best_loss:
             best_loss = validation_loss
-            os.makedirs(top_config["train_params"]["save_path"], exist_ok=True)
-            torch.save(model.state_dict(),
-                       os.path.join(top_config["train_params"]["save_path"], f"top_eleven_{validation_loss:.4f}.pt"))
+            os.makedirs(output_dir, exist_ok=True)
+            checkpoint_file = build_checkpoint_filename(
+                label_key=task_label_key,
+                epoch_num=step + 1,
+                validation_loss=validation_loss,
+                run_timestamp=run_timestamp,
+            )
+            checkpoint_path = os.path.join(output_dir, checkpoint_file)
+            torch.save(model.state_dict(), checkpoint_path)
+            checkpoint_metadata = build_checkpoint_metadata(
+                checkpoint_path=checkpoint_path,
+                label_key=task_label_key,
+                epoch_num=step + 1,
+                validation_loss=validation_loss,
+                run_timestamp=run_timestamp,
+                device=device,
+            )
+            sidecar_path = write_checkpoint_sidecar_json(checkpoint_path, checkpoint_metadata)
+            print(f"Saved checkpoint: {checkpoint_path}")
+            print(f"Saved checkpoint metadata: {sidecar_path}")
 
         print(f'Epoch: {step + 1} | Time: {epoch_mins}m {epoch_secs}s')
         print(
@@ -205,6 +299,29 @@ def run(total_epoch: int, best_loss: float):
             f'\tVal Loss: {validation_loss:.3f} |  Val PPL: {math.exp(validation_loss):7.3f}')
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train Transformer baseline on processed pre-match dataset")
+    parser.add_argument(
+        "--label-key",
+        default="fulltime_label",
+        type=normalize_label_key,
+        choices=list(TASK_NUM_CLASSES.keys()),
+        help="Target label to train. Accepts either underscores or hyphens.",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=top_config["train_params"]["epoch"],
+        help="Number of training epochs.",
+    )
+    return parser.parse_args()
+
+
+# keep module import behavior compatible for smoke tests
+configure_for_task("fulltime_label")
+
+
 if __name__ == '__main__':
-    run(total_epoch=top_config["train_params"]
-        ["epoch"], best_loss=float('inf'))
+    args = parse_args()
+    configure_for_task(args.label_key)
+    run(total_epoch=args.epochs, best_loss=float('inf'))
