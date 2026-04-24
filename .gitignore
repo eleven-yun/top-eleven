@@ -1,6 +1,7 @@
 __pycache__/
 *.pt
 *.pth
+output/
 
 # generated data artifacts — regenerate via build_dataset.py
 data/raw/

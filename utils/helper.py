@@ -8,7 +8,7 @@ def count_parameters(model):
 # TODO(diwei): Remove this functinon
 def initialize_weights(model):
     if hasattr(model, 'weight') and model.weight.dim() > 1:
-        nn.init.kaiming_uniform(model.weight.data)
+        nn.init.kaiming_uniform_(model.weight.data)
 
 
 # TODO(diwei): Remove this functinon

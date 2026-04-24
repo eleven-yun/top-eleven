@@ -1,11 +1,11 @@
 {
     "train_params": {
-        "batch_size": 5,
-        "epoch": 30,
-        "warmup": 100,
-        "save_path": "./saved",
+        "batch_size": 32,
+        "epoch": 40,
+        "warmup": 2,
+        "output_dir": "./output",
         "optimize_params": {
-            "lr": 0.01,
+            "lr": 0.0003,
             "weight_decay": 1e-5,
             "eps": 1e-4
         }
