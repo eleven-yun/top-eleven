@@ -13,3 +13,6 @@ venv/
 .conda/
 .mamba/
 env/
+
+# local editor settings (machine-specific)
+.vscode/settings.json

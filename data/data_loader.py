@@ -8,6 +8,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 from data.label_mapping import map_fulltime_label, map_htft_label, map_handicap_label
+from nn_modules.embedding.token_schema import TOKEN_COUNT
 
 top_config = {}
 cwd = os.getcwd()  # current working directory
@@ -62,10 +63,9 @@ def preprocess(batch):
     Returns
     -------
     tuple
-        The list of the data including source, target and ground truth with
-        the batch size as first dimension .
+        Token values and ground truth labels.
     """
-    return batch["x"].permute(1, 0, 2), batch["u"].permute(1, 0, 2),  batch["gt"]
+    return batch["token_values"], batch["gt"]
 
 
 def load_json_or_jsonl(file_path: str):
@@ -138,6 +138,40 @@ def flatten_prematch_features(record: dict):
     ]
 
 
+def extract_market_tokens(markets):
+    """Extract fixed market-related token values from market records."""
+
+    def safe_float(value, default=0.0):
+        if value is None:
+            return float(default)
+        return float(value)
+
+    fulltime = None
+    handicap = None
+    for market in markets:
+        if market.get("play_type") == "fulltime_1x2":
+            fulltime = market
+        elif market.get("play_type") == "handicap_1x2":
+            handicap = market
+
+    fulltime_home = safe_float((fulltime or {}).get("home_odds"))
+    fulltime_draw = safe_float((fulltime or {}).get("draw_odds"))
+    fulltime_away = safe_float((fulltime or {}).get("away_odds"))
+
+    handicap_line = safe_float((handicap or {}).get("handicap_line"))
+    handicap_home = safe_float((handicap or {}).get("home_odds"))
+    handicap_away = safe_float((handicap or {}).get("away_odds"))
+
+    return [
+        fulltime_home,
+        fulltime_draw,
+        fulltime_away,
+        handicap_line,
+        handicap_home,
+        handicap_away,
+    ]
+
+
 class PreMatchLotteryDataset(Dataset):
     """Dataset for pre-match lottery tasks.
 
@@ -197,7 +231,8 @@ def build_samples(prematch_records, match_meta_records, lottery_market_records=N
         )
 
         handicap_label = -1
-        for market in market_by_match.get(match_id, []):
+        markets = market_by_match.get(match_id, [])
+        for market in markets:
             if market.get("play_type") == "handicap_1x2":
                 handicap_label = map_handicap_label(
                     meta["home_goals"],
@@ -206,10 +241,13 @@ def build_samples(prematch_records, match_meta_records, lottery_market_records=N
                 )
                 break
 
+        token_values = flatten_prematch_features(record) + extract_market_tokens(markets)
+
         samples.append(
             {
                 "match_id": match_id,
                 "features": flatten_prematch_features(record),
+                "token_values": token_values,
                 "fulltime_label": fulltime_label,
                 "htft_label": htft_label,
                 "handicap_label": handicap_label,
@@ -241,22 +279,15 @@ class TransformerPreMatchDataset(Dataset):
     def __len__(self):
         return len(self.samples)
 
-    def _expand_features(self, features):
-        base = torch.tensor(features, dtype=torch.float32)
-        repeat_factor = math.ceil(self.d_model / base.numel())
-        expanded = base.repeat(repeat_factor)[: self.d_model]
-        return expanded
-
     def __getitem__(self, idx):
         sample = self.samples[idx]
-        expanded = self._expand_features(sample["features"])
-        x = expanded.unsqueeze(0).repeat(self.source_length, 1)
-        u = expanded.unsqueeze(0).repeat(self.target_length, 1)
+        token_values = torch.tensor(sample["token_values"], dtype=torch.float32)
+        if token_values.numel() != TOKEN_COUNT:
+            raise ValueError(f"token_values length mismatch: expected {TOKEN_COUNT}, got {token_values.numel()}")
         gt = torch.tensor(sample.get(self.label_key, -1), dtype=torch.long)
         return {
             "match_id": sample["match_id"],
-            "x": x,
-            "u": u,
+            "token_values": token_values,
             "gt": gt,
             "promoted_match": torch.tensor(sample.get("promoted_match", 0), dtype=torch.long),
         }
