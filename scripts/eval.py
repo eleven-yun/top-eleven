@@ -85,12 +85,11 @@ def evaluate(model, data_loader, device, num_classes):
 
 	with torch.no_grad():
 		for batch in data_loader:
-			x, u, gt = preprocess(batch)
-			x = x.to(device)
-			u = u.to(device)
+			token_values, gt = preprocess(batch)
+			token_values = token_values.to(device)
 			gt = gt.to(device)
 
-			output = model(x, u)
+			output = model(token_values)
 			logits = output[-1]
 
 			logits_list.append(logits.detach())
@@ -198,7 +197,11 @@ def main():
 
 	device = "cuda" if torch.cuda.is_available() else "cpu"
 	state = load_checkpoint_state_dict(args.checkpoint, device=device)
-	model.load_state_dict(state)
+	load_result = model.load_state_dict(state, strict=False)
+	if load_result.missing_keys:
+		print(f"Warning: missing keys while loading checkpoint: {load_result.missing_keys}")
+	if load_result.unexpected_keys:
+		print(f"Warning: unexpected keys while loading checkpoint: {load_result.unexpected_keys}")
 	model.to(device)
 
 	processed_dir = os.path.join(root_full_path, data_config["paths"]["processed_dir"])

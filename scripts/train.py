@@ -178,13 +178,12 @@ def train(model, data_loader, optimizer, loss_function, device='cuda'):
     epoch_loss = 0
     model.to(device)
     for i, batch in enumerate(data_loader):
-        x, u, gt = preprocess(batch)
-        x = x.to(device)
-        u = u.to(device)
+        token_values, gt = preprocess(batch)
+        token_values = token_values.to(device)
         gt = gt.to(device)
 
         optimizer.zero_grad()
-        output = model(x, u)
+        output = model(token_values)
         logits = output[-1]
         loss = loss_function(logits, gt)
         loss.backward()
@@ -224,11 +223,10 @@ def validate(model, data_loader, loss_function, device='cuda'):
     model.to(device)
     with torch.no_grad():
         for _, batch in enumerate(data_loader):
-            x, u, gt = preprocess(batch)
-            x = x.to(device)
-            u = u.to(device)
+            token_values, gt = preprocess(batch)
+            token_values = token_values.to(device)
             gt = gt.to(device)
-            output = model(x, u)
+            output = model(token_values)
 
             logits = output[-1]
             loss = loss_function(logits, gt)

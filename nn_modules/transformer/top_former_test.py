@@ -25,10 +25,11 @@ class TestTopFormer(unittest.TestCase):
         self.assertEqual(y.size(dim=2), self.num_classes)
 
     def test_probability_sum(self):
-        """Check if the output probabilities add up to one."""
+        """Check if softmax-normalized output probabilities add up to one."""
         x = torch.rand(self.enc_seq_len, self.batch_size, self.d_model)
         u = torch.rand(self.dec_seq_len, self.batch_size, self.d_model)
-        p = self.top_former.forward(x, u)
+        logits = self.top_former.forward(x, u)
+        p = torch.softmax(logits, dim=2)
         p_sum = torch.sum(p, dim=2)
         eps = 1e-6
         self.assertTrue(torch.all(torch.abs(p_sum - 1.0) < eps))
