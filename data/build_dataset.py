@@ -337,6 +337,7 @@ def build_dataset(config):
     next_team_id = 1
 
     for competition_row in selected_rows:
+        country_name = competition_row.get("country_name", "Unknown")
         competition_name = competition_row["competition_name"]
         season_name = competition_row["season_name"]
         division_level = int(competition_row["division_level"])
@@ -422,6 +423,8 @@ def build_dataset(config):
             match_meta_records.append(
                 {
                     "match_id": match_id,
+                    "country_name": country_name,
+                    "league_code": league_code,
                     "season": season_name,
                     "league": competition_name,
                     "datetime_utc": match_row["datetime_utc"],

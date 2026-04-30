@@ -12,6 +12,8 @@
       "competition_name": "Premier League",
       "league_code": "E0",
       "season_names": [
+        "2019/2020",
+        "2020/2021",
         "2021/2022",
         "2022/2023",
         "2023/2024",
@@ -24,6 +26,120 @@
       "competition_name": "Championship",
       "league_code": "E1",
       "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 2
+    },
+    {
+      "country_name": "Germany",
+      "competition_name": "Bundesliga",
+      "league_code": "D1",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 1
+    },
+    {
+      "country_name": "Germany",
+      "competition_name": "2. Bundesliga",
+      "league_code": "D2",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 2
+    },
+    {
+      "country_name": "Spain",
+      "competition_name": "La Liga",
+      "league_code": "SP1",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 1
+    },
+    {
+      "country_name": "Spain",
+      "competition_name": "Segunda Division",
+      "league_code": "SP2",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 2
+    },
+    {
+      "country_name": "Italy",
+      "competition_name": "Serie A",
+      "league_code": "I1",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 1
+    },
+    {
+      "country_name": "Italy",
+      "competition_name": "Serie B",
+      "league_code": "I2",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 2
+    },
+    {
+      "country_name": "France",
+      "competition_name": "Ligue 1",
+      "league_code": "F1",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025"
+      ],
+      "division_level": 1
+    },
+    {
+      "country_name": "France",
+      "competition_name": "Ligue 2",
+      "league_code": "F2",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
         "2021/2022",
         "2022/2023",
         "2023/2024",
@@ -45,6 +161,8 @@
   ],
   "season_split": {
     "train": [
+      "2019/2020",
+      "2020/2021",
       "2021/2022",
       "2022/2023"
     ],
