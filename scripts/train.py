@@ -312,7 +312,26 @@ def parse_args():
         default=top_config["train_params"]["epoch"],
         help="Number of training epochs.",
     )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=None,
+        help="Optional learning rate override for this run.",
+    )
+    parser.add_argument(
+        "--warmup",
+        type=int,
+        default=None,
+        help="Optional warmup epoch override for this run.",
+    )
     return parser.parse_args()
+
+
+def apply_runtime_overrides(args):
+    if args.lr is not None:
+        top_config["train_params"]["optimize_params"]["lr"] = float(args.lr)
+    if args.warmup is not None:
+        top_config["train_params"]["warmup"] = int(args.warmup)
 
 
 # keep module import behavior compatible for smoke tests
@@ -321,5 +340,6 @@ configure_for_task("fulltime_label")
 
 if __name__ == '__main__':
     args = parse_args()
+    apply_runtime_overrides(args)
     configure_for_task(args.label_key)
     run(total_epoch=args.epochs, best_loss=float('inf'))
