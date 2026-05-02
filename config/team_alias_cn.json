@@ -1,0 +1,10 @@
+{
+  "_comment": "Team name alias map for matching China Lottery / external source names to canonical team names. Canonical names must match the team_name field in data/processed/prematch_features.jsonl (not the numeric team_id in match_meta.jsonl).",
+  "_format": "Each key is a canonical team name as it appears in prematch_features.jsonl. Each value is a list of alternate name strings (Chinese, abbreviated, or misspelled) that may appear in external odds sources and should resolve to that canonical name.",
+  "_example": {
+    "Man United": ["Manchester United", "曼联", "Man Utd", "Manchester Utd"],
+    "Real Madrid": ["皇家马德里", "Real Madrid CF"],
+    "Bayern Munich": ["Bayern Munchen", "拜仁慕尼黑", "FC Bayern"]
+  },
+  "teams": {}
+}
