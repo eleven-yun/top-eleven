@@ -120,10 +120,13 @@ def initialise_team_state():
         "points_last_10": deque(maxlen=10),
         "goals_for_last_10": deque(maxlen=10),
         "goals_against_last_10": deque(maxlen=10),
+        # Sprint B: schedule / fatigue tracking
+        "last_match_date": None,          # ISO datetime string of last match played
+        "recent_match_dates": deque(maxlen=14),  # stores datetime strings for congestion calc
     }
 
 
-def update_team_state(team_state, goals_for, goals_against):
+def update_team_state(team_state, goals_for, goals_against, match_datetime=None):
     if goals_for > goals_against:
         points = 3
         win, draw = 1, 0
@@ -146,6 +149,10 @@ def update_team_state(team_state, goals_for, goals_against):
     team_state["points_last_10"].append(points)
     team_state["goals_for_last_10"].append(goals_for)
     team_state["goals_against_last_10"].append(goals_against)
+    # Sprint B: record match date for rest/congestion
+    if match_datetime is not None:
+        team_state["last_match_date"] = match_datetime
+        team_state["recent_match_dates"].append(match_datetime)
 
 
 def compute_table_positions(season_states):
@@ -169,6 +176,16 @@ def result_from_score(home_goals, away_goals):
     return "draw"
 
 
+def _parse_datetime(dt_str):
+    """Parse ISO datetime string to datetime object; returns None on failure."""
+    if dt_str is None:
+        return None
+    try:
+        return pd.Timestamp(dt_str).to_pydatetime()
+    except Exception:
+        return None
+
+
 def team_feature_snapshot(
     team_id,
     team_name,
@@ -178,6 +195,7 @@ def team_feature_snapshot(
     previous_summaries,
     head_to_head_history,
     opponent_team_id,
+    current_match_datetime=None,
 ):
     state = season_states[team_id]
     positions = compute_table_positions(season_states)
@@ -210,6 +228,23 @@ def team_feature_snapshot(
         gd if htid == team_id else -gd
         for (_wid, gd, htid) in h2h_results
     )
+
+    # Sprint B: rest days and schedule congestion
+    current_dt = _parse_datetime(current_match_datetime)
+    last_dt = _parse_datetime(state.get("last_match_date"))
+    if current_dt is not None and last_dt is not None:
+        rest_days = max((current_dt - last_dt).days, 0)
+    else:
+        rest_days = 7  # default: assume a week rest at season start
+
+    if current_dt is not None:
+        congestion_14d = sum(
+            1 for d in state.get("recent_match_dates", [])
+            if _parse_datetime(d) is not None
+            and 0 < (current_dt - _parse_datetime(d)).days <= 14
+        )
+    else:
+        congestion_14d = 0
 
     # Sprint A: extended form features
     n5 = max(len(state["wins_last_5"]), 1)
@@ -258,6 +293,9 @@ def team_feature_snapshot(
         "goal_diff_last_10": goal_diff_last_10,
         "form_score_weighted": form_score_weighted,
         "h2h_goal_diff_last_5": float(h2h_goal_diff_last_5),
+        # Sprint B: schedule/fatigue features
+        "rest_days": rest_days,
+        "congestion_14d": congestion_14d,
     }
 
 
@@ -446,6 +484,7 @@ def build_dataset(config):
             halftime_home_goals = safe_int(match_row.get("HTHG"), default=0)
             halftime_away_goals = safe_int(match_row.get("HTAG"), default=0)
 
+            current_match_dt = match_row["datetime_utc"]
             home_features = team_feature_snapshot(
                 team_id=home_team_id,
                 team_name=home_team,
@@ -455,6 +494,7 @@ def build_dataset(config):
                 previous_summaries=previous_summaries,
                 head_to_head_history=head_to_head_history,
                 opponent_team_id=away_team_id,
+                current_match_datetime=current_match_dt,
             )
             away_features = team_feature_snapshot(
                 team_id=away_team_id,
@@ -465,6 +505,7 @@ def build_dataset(config):
                 previous_summaries=previous_summaries,
                 head_to_head_history=head_to_head_history,
                 opponent_team_id=home_team_id,
+                current_match_datetime=current_match_dt,
             )
 
             match_id = f"{season_folder}-{league_code}-{idx + 1}"
@@ -534,8 +575,8 @@ def build_dataset(config):
                     ]
                 )
 
-            update_team_state(season_states[home_team_id], home_score, away_score)
-            update_team_state(season_states[away_team_id], away_score, home_score)
+            update_team_state(season_states[home_team_id], home_score, away_score, current_match_dt)
+            update_team_state(season_states[away_team_id], away_score, home_score, current_match_dt)
 
             winner_team_id = None
             if home_score > away_score:

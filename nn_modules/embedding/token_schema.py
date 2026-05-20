@@ -1,10 +1,11 @@
 import torch
 
-# Fixed token order for V2 match representation (Sprint A feature engineering).
+# Fixed token order for V3 match representation (Sprint A+B feature engineering).
 # Positions 0-15:  original 16 team-stat tokens
 # Positions 16-31: Sprint A extended form tokens (8 per side)
 # Positions 32-34: Sprint A gap tokens (neutral side)
 # Positions 35-40: market tokens (unchanged)
+# Positions 41-45: Sprint B schedule/fatigue tokens (2 per-side pairs + 1 gap)
 TOKEN_NAMES = [
     # --- original team stats (slots 0-7) ---
     "home_league_position",
@@ -51,6 +52,12 @@ TOKEN_NAMES = [
     "handicap_line",
     "odds_handicap_home",
     "odds_handicap_away",
+    # --- Sprint B: schedule / fatigue (slots 31-33) ---
+    "home_rest_days",
+    "away_rest_days",
+    "home_congestion_14d",
+    "away_congestion_14d",
+    "position_gap",  # home_position - away_position (gap, neutral)
 ]
 
 TOKEN_COUNT = len(TOKEN_NAMES)
@@ -65,6 +72,8 @@ TOKEN_TYPE_IDS = [
     0, 0, 0,
     # market tokens
     1, 1, 1, 2, 1, 1,
+    # Sprint B: 5 schedule/fatigue tokens
+    0, 0, 0, 0, 0,
 ]
 
 # 0=neutral, 1=home, 2=away
@@ -77,6 +86,8 @@ TOKEN_SIDE_IDS = [
     0, 0, 0,
     # market tokens
     1, 0, 2, 0, 1, 2,
+    # Sprint B: rest_days home/away, congestion home/away, position_gap neutral
+    1, 2, 1, 2, 0,
 ]
 
 # Slot IDs distinguish repeated concept groups.
@@ -89,6 +100,8 @@ TOKEN_SLOT_IDS = [
     22, 23, 24,
     # market tokens (slots 25-30)
     25, 26, 27, 28, 29, 30,
+    # Sprint B: schedule tokens (slots 31-33)
+    31, 31, 32, 32, 33,
 ]
 
 NUM_TOKEN_TYPES = max(TOKEN_TYPE_IDS) + 1

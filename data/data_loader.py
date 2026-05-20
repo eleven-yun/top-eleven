@@ -156,6 +156,12 @@ def flatten_prematch_features(record: dict):
         safe_float(home.get("elo_rating")) - safe_float(away.get("elo_rating")),
         safe_float(home.get("points_last_5")) - safe_float(away.get("points_last_5")),
         safe_float(home.get("goal_diff_last_5")) - safe_float(away.get("goal_diff_last_5")),
+        # Sprint B: schedule / fatigue tokens (4 per-side + 1 gap)
+        safe_float(home.get("rest_days"), default=7.0),
+        safe_float(away.get("rest_days"), default=7.0),
+        safe_float(home.get("congestion_14d"), default=0.0),
+        safe_float(away.get("congestion_14d"), default=0.0),
+        safe_float(home.get("league_position")) - safe_float(away.get("league_position")),
     ]
 
 
