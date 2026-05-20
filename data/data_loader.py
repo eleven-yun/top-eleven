@@ -135,6 +135,27 @@ def flatten_prematch_features(record: dict):
         safe_float(away.get("team_strength_prior")),
         safe_float(home.get("strength_gap_vs_division_avg")),
         safe_float(away.get("strength_gap_vs_division_avg")),
+        # Sprint A: extended form features (16 new per-side tokens)
+        safe_float(home.get("win_rate_last_5")),
+        safe_float(away.get("win_rate_last_5")),
+        safe_float(home.get("goal_diff_last_5")),
+        safe_float(away.get("goal_diff_last_5")),
+        safe_float(home.get("points_last_10")),
+        safe_float(away.get("points_last_10")),
+        safe_float(home.get("goals_scored_last_10")),
+        safe_float(away.get("goals_scored_last_10")),
+        safe_float(home.get("goals_conceded_last_10")),
+        safe_float(away.get("goals_conceded_last_10")),
+        safe_float(home.get("goal_diff_last_10")),
+        safe_float(away.get("goal_diff_last_10")),
+        safe_float(home.get("form_score_weighted")),
+        safe_float(away.get("form_score_weighted")),
+        safe_float(home.get("h2h_goal_diff_last_5")),
+        safe_float(away.get("h2h_goal_diff_last_5")),
+        # Sprint A: gap tokens (3 neutral tokens)
+        safe_float(home.get("elo_rating")) - safe_float(away.get("elo_rating")),
+        safe_float(home.get("points_last_5")) - safe_float(away.get("points_last_5")),
+        safe_float(home.get("goal_diff_last_5")) - safe_float(away.get("goal_diff_last_5")),
     ]
 
 

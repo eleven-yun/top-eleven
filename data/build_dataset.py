@@ -114,16 +114,25 @@ def initialise_team_state():
         "points_last_5": deque(maxlen=5),
         "goals_for_last_5": deque(maxlen=5),
         "goals_against_last_5": deque(maxlen=5),
+        # Sprint A: extended form tracking
+        "wins_last_5": deque(maxlen=5),
+        "draws_last_5": deque(maxlen=5),
+        "points_last_10": deque(maxlen=10),
+        "goals_for_last_10": deque(maxlen=10),
+        "goals_against_last_10": deque(maxlen=10),
     }
 
 
 def update_team_state(team_state, goals_for, goals_against):
     if goals_for > goals_against:
         points = 3
+        win, draw = 1, 0
     elif goals_for == goals_against:
         points = 1
+        win, draw = 0, 1
     else:
         points = 0
+        win, draw = 0, 0
 
     team_state["points"] += points
     team_state["goals_for"] += goals_for
@@ -132,6 +141,11 @@ def update_team_state(team_state, goals_for, goals_against):
     team_state["points_last_5"].append(points)
     team_state["goals_for_last_5"].append(goals_for)
     team_state["goals_against_last_5"].append(goals_against)
+    team_state["wins_last_5"].append(win)
+    team_state["draws_last_5"].append(draw)
+    team_state["points_last_10"].append(points)
+    team_state["goals_for_last_10"].append(goals_for)
+    team_state["goals_against_last_10"].append(goals_against)
 
 
 def compute_table_positions(season_states):
@@ -190,7 +204,32 @@ def team_feature_snapshot(
 
     h2h_key = tuple(sorted([team_id, opponent_team_id]))
     h2h_results = head_to_head_history[h2h_key]
-    h2h_wins_last_5 = sum(1 for winner_team_id in h2h_results if winner_team_id == team_id)
+    # h2h entries are (winner_id_or_None, home_goals - away_goals, home_team_id)
+    h2h_wins_last_5 = sum(1 for (wid, _gd, _htid) in h2h_results if wid == team_id)
+    h2h_goal_diff_last_5 = sum(
+        gd if htid == team_id else -gd
+        for (_wid, gd, htid) in h2h_results
+    )
+
+    # Sprint A: extended form features
+    n5 = max(len(state["wins_last_5"]), 1)
+    win_rate_last_5 = sum(state["wins_last_5"]) / n5
+    goal_diff_last_5 = float(sum(state["goals_for_last_5"]) - sum(state["goals_against_last_5"]))
+    points_last_10 = int(sum(state["points_last_10"]))
+    goals_scored_last_10 = float(sum(state["goals_for_last_10"]))
+    goals_conceded_last_10 = float(sum(state["goals_against_last_10"]))
+    goal_diff_last_10 = float(sum(state["goals_for_last_10"]) - sum(state["goals_against_last_10"]))
+
+    # Weighted form: most recent match gets highest weight; normalized to [0, 1]
+    pts_list = list(state["points_last_5"])  # oldest first
+    if pts_list:
+        weights = list(range(1, len(pts_list) + 1))
+        total_w = sum(weights)
+        form_score_weighted = round(
+            sum(p * w for p, w in zip(pts_list, weights)) / (total_w * 3.0), 4
+        )
+    else:
+        form_score_weighted = 0.0
 
     return {
         "team_id": str(team_id),
@@ -210,6 +249,15 @@ def team_feature_snapshot(
         "division_level_last_season": division_level_last_season,
         "team_strength_prior": round(team_strength_prior, 4),
         "strength_gap_vs_division_avg": round(team_strength_prior - baseline_ppg, 4),
+        # Sprint A new features
+        "win_rate_last_5": round(win_rate_last_5, 4),
+        "goal_diff_last_5": goal_diff_last_5,
+        "points_last_10": points_last_10,
+        "goals_scored_last_10": goals_scored_last_10,
+        "goals_conceded_last_10": goals_conceded_last_10,
+        "goal_diff_last_10": goal_diff_last_10,
+        "form_score_weighted": form_score_weighted,
+        "h2h_goal_diff_last_5": float(h2h_goal_diff_last_5),
     }
 
 
@@ -494,7 +542,10 @@ def build_dataset(config):
                 winner_team_id = home_team_id
             elif away_score > home_score:
                 winner_team_id = away_team_id
-            head_to_head_history[tuple(sorted([home_team_id, away_team_id]))].append(winner_team_id)
+            # Store (winner_id_or_None, home_goals - away_goals, home_team_id) for H2H goal diff
+            head_to_head_history[tuple(sorted([home_team_id, away_team_id]))].append(
+                (winner_team_id, home_score - away_score, home_team_id)
+            )
 
         for team_id, state in season_states.items():
             matches_played = max(state["matches_played"], 1)
