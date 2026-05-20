@@ -79,17 +79,33 @@ For all three play types, the fulltime component follows the same definition:
 
 ---
 
-## 3. Scope (v1)
+## 3. Scope (v1 — updated May 2026)
 
-| Dimension | v1 Scope |
-|-----------|----------|
+| Dimension | Current Scope |
+|-----------|--------------|
 | Sport | Football only |
-| Product scope | Fulltime 1X2 first, then HT/FT and Handicap 1X2 |
-| League | One league at a time |
-| Seasons | 2 to 4 consecutive seasons |
-| Inputs | Pre-match team history, lineup, schedule context |
-| Live info | Excluded in v1 |
+| Product scope | Fulltime 1X2, HT/FT 1X2, Handicap 1X2 (all three heads trained) |
+| Leagues | 10 leagues across 5 countries (Bundesliga, 2.Bundesliga, Premier League, La Liga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Süper Lig, Championship) |
+| Seasons | 6 seasons per league (2019/20 – 2024/25) |
+| Inputs | Pre-match match-token embeddings (team form, schedule, league context) |
+| Live info | Excluded |
 | Commentary/video | Excluded |
+| Real odds | Not yet integrated — `enrich_lottery_odds.py` built, awaiting real data |
+| Promotion/relegation features | Deferred — not yet in feature set |
+| Lineup/player features | Deferred |
+
+### 3.1 Current Performance Baseline (as of May 2026)
+
+| Task | Val Log-Loss | Val Accuracy | Val ECE | Status |
+|------|-------------|-------------|--------|--------|
+| Handicap 1X2 | 0.8784 | 48.3% | 0.0032 | Accuracy near baseline |
+| Fulltime 1X2 | 1.0777 | 43.0% | 0.0086 | Accuracy near baseline |
+| HT/FT 1X2 | 1.9747 | 24.9% | 0.0040 | Accuracy near baseline |
+
+Calibration is strong (ECE < 0.01). Accuracy is near-random-baseline. Primary
+bottleneck is **feature representation** — current features lack recent form,
+head-to-head history, and market signals. Phase 5 feature engineering is the
+next priority.
 
 ---
 
