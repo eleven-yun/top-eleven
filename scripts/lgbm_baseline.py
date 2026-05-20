@@ -27,10 +27,16 @@ ROOT = os.path.abspath("..")
 sys.path.insert(0, ROOT)
 os.chdir(cwd)
 
-from data.data_loader import load_json_or_jsonl as load_records, flatten_prematch_features, split_samples_by_season
+from data.data_loader import load_json_or_jsonl as load_records, flatten_prematch_features, extract_market_tokens, split_samples_by_season
 from data.label_mapping import map_fulltime_label, map_htft_label, map_handicap_label
 
 from nn_modules.embedding.token_schema import TOKEN_NAMES
+
+# Feature names for the combined feature vector:
+#   flatten_prematch_features() -> 40 values: TOKEN_NAMES[0:35] + TOKEN_NAMES[41:46]
+#   extract_market_tokens()     ->  6 values: TOKEN_NAMES[35:41]
+FEATURE_NAMES_40 = list(TOKEN_NAMES[0:35]) + list(TOKEN_NAMES[41:46])
+FEATURE_NAMES_46 = FEATURE_NAMES_40 + list(TOKEN_NAMES[35:41])
 
 
 TASK_NUM_CLASSES = {
@@ -77,7 +83,7 @@ def result_to_label(task, meta):
     return -1
 
 
-def build_xy(samples, prematch_by_id, meta_by_id, task):
+def build_xy(samples, prematch_by_id, meta_by_id, task, market_by_id=None):
     X, y = [], []
     for s in samples:
         mid = s.get("match_id", s.get("id"))
@@ -88,8 +94,9 @@ def build_xy(samples, prematch_by_id, meta_by_id, task):
         label = result_to_label(task, meta)
         if label < 0:
             continue
-        # Use only the 40 team-stat/schedule features (no market tokens)
         feats = flatten_prematch_features(pf)
+        if market_by_id is not None:
+            feats = feats + extract_market_tokens(market_by_id.get(mid, []))
         X.append(feats)
         y.append(label)
     return np.array(X, dtype=np.float32), np.array(y, dtype=np.int32)
@@ -130,7 +137,11 @@ def main():
     meta_by_id = {r["match_id"]: dict(r) for r in meta_records}
 
     # Merge handicap_line from lottery_market into meta_by_id
+    # and group market records by match_id for Sprint C
+    from collections import defaultdict
+    market_by_id = defaultdict(list)
     for m in market_records:
+        market_by_id[m["match_id"]].append(m)
         if m.get("play_type") == "handicap_1x2" and m.get("handicap_line") is not None:
             mid = m["match_id"]
             if mid in meta_by_id:
@@ -141,9 +152,9 @@ def main():
 
     split_samples = split_samples_by_season(all_samples, meta_records, data_config["season_split"])
 
-    X_train, y_train = build_xy(split_samples["train"], prematch_by_id, meta_by_id, args.task)
-    X_val, y_val = build_xy(split_samples["validation"], prematch_by_id, meta_by_id, args.task)
-    X_test, y_test = build_xy(split_samples["test"], prematch_by_id, meta_by_id, args.task)
+    X_train, y_train = build_xy(split_samples["train"], prematch_by_id, meta_by_id, args.task, market_by_id)
+    X_val, y_val = build_xy(split_samples["validation"], prematch_by_id, meta_by_id, args.task, market_by_id)
+    X_test, y_test = build_xy(split_samples["test"], prematch_by_id, meta_by_id, args.task, market_by_id)
 
     n_classes = TASK_NUM_CLASSES[args.task]
     print(f"\n=== LightGBM Baseline: {args.task} ===")
@@ -182,8 +193,9 @@ def main():
     print(f"Test log-loss: {test_ll:.4f}  accuracy: {test_acc*100:.1f}%")
 
     # Feature importance (top 15)
+    feat_names = FEATURE_NAMES_46 if X_train.shape[1] == 46 else FEATURE_NAMES_40
     importances = sorted(
-        zip(TOKEN_NAMES[:X_train.shape[1]], model.feature_importances_),
+        zip(feat_names[:X_train.shape[1]], model.feature_importances_),
         key=lambda x: -x[1],
     )
     print("\nTop 15 feature importances:")
