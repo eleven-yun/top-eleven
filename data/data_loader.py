@@ -268,7 +268,15 @@ def build_samples(prematch_records, match_meta_records, lottery_market_records=N
                 )
                 break
 
-        token_values = flatten_prematch_features(record) + extract_market_tokens(markets)
+        # Reorder to match token schema layout:
+        #   [0:35]  = prematch stats + Sprint A (TOKEN_NAMES[0:35])
+        #   [35:41] = market tokens (TOKEN_NAMES[35:41])
+        #   [41:46] = Sprint B schedule tokens (TOKEN_NAMES[41:46])
+        # flatten_prematch_features returns: TOKEN_NAMES[0:35] + TOKEN_NAMES[41:46] (40 values)
+        # extract_market_tokens returns:     TOKEN_NAMES[35:41] (6 values)
+        prematch_40 = flatten_prematch_features(record)
+        market_6 = extract_market_tokens(markets)
+        token_values = prematch_40[:35] + market_6 + prematch_40[35:]
 
         samples.append(
             {
