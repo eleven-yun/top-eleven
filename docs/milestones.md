@@ -186,8 +186,26 @@ accuracy is near-random.*
 
 *Top features: odds_fulltime_away/home/draw dominate fulltime; handicap_line is #1 for handicap (score 644); odds dominate HT/FT. Sprint A/B features (form_score_weighted, goal_diff, elo) remain in top 15.*
 
-### Sprint D (remaining) — Architecture Experiments
-- [ ] Deeper transformer encoder (4–6 layers)
+### Sprint D (remaining) — Architecture Experiments ✅ COMPLETE (ensemble result)
+- [x] Ensemble: LightGBM soft-vote with transformer (`scripts/ensemble_lgbm_transformer.py`)
+- [x] Bug fix: transformer token ordering (Sprint B tokens were at market positions 35–40, now fixed)
+- [x] Re-ran autoresearch sweep with corrected token ordering
+
+#### Ensemble Results (alpha sweep, validation split)
+
+| Task | LGBM-only | Transformer-only | Best ensemble (alpha=1.0) | Verdict |
+|------|-----------|-----------------|--------------------------|---------|
+| Fulltime 1X2 | **1.0054 / 50.2%** | 1.0716 / 44.5% | 1.0054 / 50.2% (alpha=1.0) | LGBM dominates |
+| Handicap 1X2 | **0.7830 / 51.4%** | 0.8783 / 48.3% | 0.7830 / 51.4% (alpha=1.0) | LGBM dominates |
+| HT/FT 1X2 | **1.9081 / 30.4%** | 1.9805 / 24.9% | 1.9081 / 30.4% (alpha=1.0) | LGBM dominates |
+
+*Finding: Transformer adds NO complementary signal — every ensemble mix with transformer hurts performance. The transformer with 15 epochs cannot match LightGBM's signal extraction.*
+
+*Root cause hypotheses: (a) transformer needs 100+ epochs to converge on tabular data; (b) transformer architecture lacks tabular inductive bias; (c) 46 tokens × d_model positional encoding may not generalise well to structured features.*
+
+*Architectural decision: Adopt LightGBM as primary model for prediction. Transformer continues as a research path for potential calibration or multi-task learning.*
+
+
 - [ ] Ensemble: LightGBM output stacked with transformer (soft voting)
 - [ ] League-specific calibration variants
 
