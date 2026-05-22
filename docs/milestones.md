@@ -286,14 +286,44 @@ consider market-odds-as-features as primary signal or reassess dataset coverage.
 
 ---
 
-## Phase 7 — Batch Inference and Issue Output
+## Phase 7 — Batch Inference and Issue Output ✅ COMPLETE
 *Goal: produce actionable pre-match outputs for each lottery issue.*
 
-- [ ] Implement pre-match inference command (issue-based batch)
-- [ ] Output predictions by issue with all three play types
-- [ ] Add output schema checks and sanity guards
-- [ ] Add simple CLI summary (top confident picks per play type)
-- [ ] Document usage in `README.md`
+- [x] Implement pre-match inference command (issue-based batch) — `scripts/issue_predict.py`
+- [x] Output predictions by issue with all three play types (handicap + fulltime)
+- [x] Add output schema checks and sanity guards (train/target date partitioning)
+- [x] Add simple CLI summary (top confident picks per play type with EV/odds/hit display)
+- [x] Document usage in `README.md`
+
+### Usage
+```bash
+# Picks for today (trains on all data strictly before today's date):
+python scripts/issue_predict.py
+
+# Picks for a specific historical or future date:
+python scripts/issue_predict.py --date 2025-03-15
+
+# Tighter filter:
+python scripts/issue_predict.py --date 2025-03-15 \
+    --ev-threshold 0.10 --min-confidence 0.60
+
+# Handicap only, top 5 picks:
+python scripts/issue_predict.py --date 2025-03-15 \
+    --tasks handicap_label --top-n 5
+```
+
+### Sample output (2025-03-15, handicap, ev≥0.05, conf≥0.55 → 18 picks, 9/18 wins, −¥1.94)
+| Pick | Match | EV | Conf | Result |
+|------|-------|----|------|--------|
+| AWAY | Werder Bremen v M'gladbach (−0.25) | +0.257 | 0.706 | WIN |
+| HOME | Union Berlin v Bayern Munich (+1.50) | +0.249 | 0.675 | WIN |
+| AWAY | Cordoba v Sp Gijon (−0.25) | +0.212 | 0.628 | WIN |
+
+### Acceptance criteria
+- [x] Pre-match inference command implemented and tested
+- [x] Output per issue (JSON + formatted CLI table)
+- [x] Training strictly partitioned by date (no look-ahead)
+- [x] Usage documented in README.md
 
 ---
 
