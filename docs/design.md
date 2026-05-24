@@ -87,25 +87,35 @@ For all three play types, the fulltime component follows the same definition:
 | Product scope | Fulltime 1X2, HT/FT 1X2, Handicap 1X2 (all three heads trained) |
 | Leagues | 10 leagues across 5 countries (Bundesliga, 2.Bundesliga, Premier League, La Liga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Süper Lig, Championship) |
 | Seasons | 6 seasons per league (2019/20 – 2024/25) |
-| Inputs | Pre-match match-token embeddings (team form, schedule, league context) |
+| Inputs | 46 pre-match features: team form, schedule, market odds (LightGBM); match-token embeddings (transformer, research path) |
 | Live info | Excluded |
 | Commentary/video | Excluded |
-| Real odds | Not yet integrated — `enrich_lottery_odds.py` built, awaiting real data |
+| Real odds | Integrated: 500.com CN lottery post-match SP (`fetch_cn_odds.py`), ~46% match coverage on test split |
+| Pre-match CN odds | Not yet scraped — would replace EU odds proxy for EV calculation |
 | Promotion/relegation features | Deferred — not yet in feature set |
 | Lineup/player features | Deferred |
 
-### 3.1 Current Performance Baseline (as of May 2026)
+### 3.1 Current Performance (as of May 2026)
 
-| Task | Val Log-Loss | Val Accuracy | Val ECE | Status |
-|------|-------------|-------------|--------|--------|
-| Handicap 1X2 | 0.8784 | 48.3% | 0.0032 | Accuracy near baseline |
-| Fulltime 1X2 | 1.0777 | 43.0% | 0.0086 | Accuracy near baseline |
-| HT/FT 1X2 | 1.9747 | 24.9% | 0.0040 | Accuracy near baseline |
+**Primary model: LightGBM, 46 features (40 pre-match + 6 market odds)**
 
-Calibration is strong (ECE < 0.01). Accuracy is near-random-baseline. Primary
-bottleneck is **feature representation** — current features lack recent form,
-head-to-head history, and market signals. Phase 5 feature engineering is the
-next priority.
+| Task | Val Log-Loss | Val Accuracy | Test Log-Loss | Test Accuracy | Status |
+|------|-------------|-------------|--------------|--------------|--------|
+| Handicap 1X2 | 0.7830 | 51.4% | — | — | ✅ Primary task; positive EV confirmed |
+| Fulltime 1X2 | 1.0054 | 50.2% | — | — | No betting edge at any threshold |
+| HT/FT 1X2 | 1.9081 | 30.4% | — | — | No betting edge at any threshold |
+
+**Betting backtest (Handicap 1X2, EV≥0.05, conf≥0.55, test split 2024/25):**
+
+| Odds source | Bets | ROI | Hit-rate |
+|-------------|------|-----|----------|
+| EU bookmaker proxy (football-data.co.uk) | 1216 | +4.32% | 55.5% |
+| CN Lottery SP (500.com, 20% coverage) | 1216 | +7.19% | 55.5% |
+
+Best EV threshold (≥0.08): EU +4.64% / CN +7.60% on 984 bets.
+
+Transformer (match-token embedding) remains a research path — LightGBM dominates
+for all three tasks (ensemble with transformer adds no lift).
 
 ---
 
@@ -389,7 +399,23 @@ Calibration and log loss must be reviewed on these slices before releasing a mod
 
 ## 7. Target Model Architecture
 
-### 7.1 v1: Structured Pre-Match Classifier
+### 7.0 Current Production Model: LightGBM (46 features)
+
+LightGBM is the adopted primary model as of Phase 5. The transformer (Sections
+7.1–7.2) continues as a research path but currently adds no complementary signal.
+
+**Feature vector (46 total):**
+- 40 pre-match features: ELO, rolling form (goals, win-rate, goal-diff last 5/10),
+  weighted form score, H2H goal diff, rest days, schedule congestion, league position gap
+- 6 market odds: fulltime home/draw/away closing odds, handicap line + home/away odds
+
+**Training**: Season split (train 2019/20–2022/23, val 2023/24, test 2024/25).
+
+**Inference**: `scripts/predict_lgbm.py` (batch), `scripts/issue_predict.py` (daily picks).
+
+---
+
+### 7.1 v1: Structured Pre-Match Classifier (transformer, research path)
 
 ```
 Static Encoder
