@@ -135,6 +135,33 @@ def flatten_prematch_features(record: dict):
         safe_float(away.get("team_strength_prior")),
         safe_float(home.get("strength_gap_vs_division_avg")),
         safe_float(away.get("strength_gap_vs_division_avg")),
+        # Sprint A: extended form features (16 new per-side tokens)
+        safe_float(home.get("win_rate_last_5")),
+        safe_float(away.get("win_rate_last_5")),
+        safe_float(home.get("goal_diff_last_5")),
+        safe_float(away.get("goal_diff_last_5")),
+        safe_float(home.get("points_last_10")),
+        safe_float(away.get("points_last_10")),
+        safe_float(home.get("goals_scored_last_10")),
+        safe_float(away.get("goals_scored_last_10")),
+        safe_float(home.get("goals_conceded_last_10")),
+        safe_float(away.get("goals_conceded_last_10")),
+        safe_float(home.get("goal_diff_last_10")),
+        safe_float(away.get("goal_diff_last_10")),
+        safe_float(home.get("form_score_weighted")),
+        safe_float(away.get("form_score_weighted")),
+        safe_float(home.get("h2h_goal_diff_last_5")),
+        safe_float(away.get("h2h_goal_diff_last_5")),
+        # Sprint A: gap tokens (3 neutral tokens)
+        safe_float(home.get("elo_rating")) - safe_float(away.get("elo_rating")),
+        safe_float(home.get("points_last_5")) - safe_float(away.get("points_last_5")),
+        safe_float(home.get("goal_diff_last_5")) - safe_float(away.get("goal_diff_last_5")),
+        # Sprint B: schedule / fatigue tokens (4 per-side + 1 gap)
+        safe_float(home.get("rest_days"), default=7.0),
+        safe_float(away.get("rest_days"), default=7.0),
+        safe_float(home.get("congestion_14d"), default=0.0),
+        safe_float(away.get("congestion_14d"), default=0.0),
+        safe_float(home.get("league_position")) - safe_float(away.get("league_position")),
     ]
 
 
@@ -241,7 +268,15 @@ def build_samples(prematch_records, match_meta_records, lottery_market_records=N
                 )
                 break
 
-        token_values = flatten_prematch_features(record) + extract_market_tokens(markets)
+        # Reorder to match token schema layout:
+        #   [0:35]  = prematch stats + Sprint A (TOKEN_NAMES[0:35])
+        #   [35:41] = market tokens (TOKEN_NAMES[35:41])
+        #   [41:46] = Sprint B schedule tokens (TOKEN_NAMES[41:46])
+        # flatten_prematch_features returns: TOKEN_NAMES[0:35] + TOKEN_NAMES[41:46] (40 values)
+        # extract_market_tokens returns:     TOKEN_NAMES[35:41] (6 values)
+        prematch_40 = flatten_prematch_features(record)
+        market_6 = extract_market_tokens(markets)
+        token_values = prematch_40[:35] + market_6 + prematch_40[35:]
 
         samples.append(
             {

@@ -190,6 +190,39 @@ def kickoff_distance_hours(dt1, dt2):
 # Candidate scoring
 # ---------------------------------------------------------------------------
 
+# Chinese league name → canonical English league name (for league consistency scoring)
+LEAGUE_ALIAS_CN = {
+    "英超": "premier league",
+    "西甲": "la liga",
+    "德甲": "bundesliga",
+    "意甲": "serie a",
+    "法甲": "ligue 1",
+    "德乙": "2. bundesliga",
+    "意乙": "serie b",
+    "法乙": "ligue 2",
+    "西乙": "segunda division",
+    "英冠": "championship",
+    "葡超": "primeira liga",
+    "荷甲": "eredivisie",
+    "土超": "super lig",
+    "俄超": "russian premier league",
+    "苏超": "scottish premiership",
+    "比甲": "jupiler pro league",
+    "奥超": "bundesliga",
+    "希甲": "super league",
+    "瑞超": "super league",
+    "挪超": "eliteserien",
+    "瑞典超": "allsvenskan",
+    "丹超": "superliga",
+    "美职联": "mls",
+    "日职": "j-league",
+    "日职联": "j-league",
+    "墨超": "liga mx",
+    "阿甲": "primera division",
+    "巴甲": "campeonato brasileiro",
+}
+
+
 PLAY_TYPE_CANONICAL = {
     "fulltime_1x2": "fulltime_1x2",
     "胜平负": "fulltime_1x2",
@@ -291,13 +324,15 @@ def score_candidate(odds_row, meta_row, alias_index, kickoff_dt_odds):
 
     # --- league consistency ---
     league_raw = (odds_row.get("league_name_raw") or "").lower()
+    # Resolve Chinese league name to English via alias map
+    league_resolved = LEAGUE_ALIAS_CN.get(league_raw, league_raw)
     meta_league = (meta_row.get("league") or "").lower()
     meta_country = (meta_row.get("country_name") or "").lower()
     meta_league_code = (meta_row.get("league_code") or "").lower()
 
-    if league_raw:
+    if league_resolved:
         for candidate in (meta_league, meta_country, meta_league_code):
-            if candidate and (league_raw in candidate or candidate in league_raw):
+            if candidate and (league_resolved in candidate or candidate in league_resolved):
                 score += 0.20
                 break
 

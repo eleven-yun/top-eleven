@@ -58,6 +58,59 @@ graph LR;
 
 ---
 
+## Quick Start — Daily Pick Generation (Phase 7)
+
+Generate today's pre-match picks in ~30 seconds:
+
+```bash
+conda activate top-eleven
+
+# Picks for today (trains on all historical data before today)
+python scripts/issue_predict.py
+
+# Picks for a specific date (simulation/backtest mode)
+python scripts/issue_predict.py --date 2025-03-15
+
+# Tighter filter (fewer but higher-confidence picks)
+python scripts/issue_predict.py --date 2025-03-15 \
+    --ev-threshold 0.10 --min-confidence 0.60
+
+# Handicap only, show top 5 picks
+python scripts/issue_predict.py --date 2025-03-15 \
+    --tasks handicap_label --top-n 5
+
+# Save picks to custom path
+python scripts/issue_predict.py --date 2025-03-15 \
+    --output output/picks/2025-03-15.json
+```
+
+**Recommended defaults**: `--ev-threshold 0.05 --min-confidence 0.55`
+(Backtest: Handicap test ROI +4.3%, 1216 bets/season, hit-rate 55.5%)
+
+**Output**: CLI pick slip table + JSON file at `output/picks/<date>.json`
+
+> **Note on odds**: The current pipeline uses European bookmaker odds as a proxy.
+> China Lottery parimutuel odds differ (higher take-out ~35%). Once real
+> China Lottery odds are available, point `--market` at `lottery_market_cn.jsonl`.
+
+---
+
+## Reproducible Backtest (Phase 6)
+
+```bash
+# Full Phase 6 backtest pipeline (predictions + EV sweep + sensitivity analysis)
+bash scripts/run_phase6.sh
+```
+
+Results (LightGBM 46-feat, European odds proxy):
+
+| Task | Config | Val ROI | Test ROI | Test Bets |
+|------|--------|---------|---------|-----------|
+| Handicap 1X2 | EV≥0.05, conf≥0.55 | +9.7% | **+4.3%** | 1216 |
+| Fulltime 1X2 | any | negative | negative | — |
+
+---
+
 ## Environment Setup (Conda Only)
 
 This project currently uses a conda-first workflow for local development.
