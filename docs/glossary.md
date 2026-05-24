@@ -68,7 +68,7 @@ before the match starts, making both sides more balanced to bet on.
 > Example: Handicap line = −1.0 (home gives 1 goal)
 > If home wins 2-0, handicap result = Home Win (2−1=1 > 0)
 > If home wins 1-0, handicap result = Draw (1−1=0)
-> If home wins 1-0 with line −0.5, result = Away Win (1−0.5=0.5... wait no)
+> If home wins 1-0 with line −0.5, handicap result = Home Win (1−0.5=0.5 > 0)
 
 In our data, `handicap_line` is from the home team's perspective. A negative value
 means home team gives goals (handicap disadvantage); positive means home team

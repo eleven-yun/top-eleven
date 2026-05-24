@@ -70,10 +70,12 @@ for EV in 0.00 0.02 0.05 0.10 0.15 0.20; do
   for SPLIT in validation test; do
     F="output/backtest/handicap_label_${SPLIT}_ev${EV}.json"
     if [[ -f "$F" ]]; then
-      conda run -n top-eleven python3 - <<PYEOF
-import json
-r = json.loads(open("${F}").read())
-print(f"  ev={${EV}:<8} {\"${SPLIT}\":<12} {r.get('total_bets',0):<10} {r.get('total_profit_yuan',0):<14.2f} {r.get('roi',0):<10.4f} {r.get('hit_rate',0):<12.4f}")
+      EV_VAL="$EV" SPLIT_VAL="$SPLIT" F_VAL="$F" conda run -n top-eleven python3 - <<'PYEOF'
+import json, os
+r = json.loads(open(os.environ["F_VAL"]).read())
+ev = os.environ["EV_VAL"]
+split = os.environ["SPLIT_VAL"]
+print(f"  {ev:<12} {split:<12} {r.get('total_bets',0):<10} {r.get('total_profit_yuan',0):<14.2f} {r.get('roi',0):<10.4f} {r.get('hit_rate',0):<12.4f} {r.get('max_drawdown_yuan',0):<12.2f}")
 PYEOF
     fi
   done
@@ -86,10 +88,12 @@ for CONF in 0.0 0.40 0.50 0.55 0.60; do
   for SPLIT in validation test; do
     F="output/backtest/handicap_${SPLIT}_ev0.05_conf${CONF}.json"
     if [[ -f "$F" ]]; then
-      conda run -n top-eleven python3 - <<PYEOF
-import json
-r = json.loads(open("${F}").read())
-print(f"  conf={${CONF}:<8} {\"${SPLIT}\":<12} {r.get('total_bets',0):<10} {r.get('total_profit_yuan',0):<14.2f} {r.get('roi',0):<10.4f} {r.get('hit_rate',0):<12.4f}")
+      CONF_VAL="$CONF" SPLIT_VAL="$SPLIT" F_VAL="$F" conda run -n top-eleven python3 - <<'PYEOF'
+import json, os
+r = json.loads(open(os.environ["F_VAL"]).read())
+conf = os.environ["CONF_VAL"]
+split = os.environ["SPLIT_VAL"]
+print(f"  {conf:<12} {split:<12} {r.get('total_bets',0):<10} {r.get('total_profit_yuan',0):<14.2f} {r.get('roi',0):<10.4f} {r.get('hit_rate',0):<12.4f} {r.get('max_drawdown_yuan',0):<12.2f}")
 PYEOF
     fi
   done

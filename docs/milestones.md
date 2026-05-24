@@ -59,7 +59,7 @@ is degenerate across splits, fix data quality before proceeding.
 *Goal: build robust baselines for the three lottery play types.*
 
 ### Tabular baseline
-- [ ] Implement LightGBM/XGBoost pre-match baseline — **not yet started**
+- [x] Implement LightGBM pre-match baseline (`scripts/lgbm_baseline.py`, `scripts/predict_lgbm.py`) — **done in Phase 5 Sprint D**
 
 ### Neural baseline (match-token embedding architecture)
 - [x] Implement match-token embedding encoder (`nn_modules/encoder/top_encoder.py`)

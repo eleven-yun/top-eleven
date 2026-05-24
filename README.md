@@ -91,7 +91,9 @@ python scripts/issue_predict.py --date 2025-03-15 \
 
 > **Note on odds**: The current pipeline uses European bookmaker odds as a proxy.
 > China Lottery parimutuel odds differ (higher take-out ~35%). Once real
-> China Lottery odds are available, point `--market` at `lottery_market_cn.jsonl`.
+> China Lottery odds are available, use `lottery_market_cn.jsonl` with the
+> scripts that support `--market` (for example `backtest_ev.py` or
+> `cn_lottery_backtest.py`).
 
 ---
 

@@ -111,10 +111,32 @@ def main():
     split_samples = split_samples_by_season(all_samples, meta_records, data_config["season_split"])
 
     X_train, y_train, _ = build_xy(split_samples["train"], prematch_by_id, meta_by_id, market_by_id, args.task)
-    X_val, y_val, val_ids = build_xy(split_samples["validation"], prematch_by_id, meta_by_id, market_by_id, args.task)
     X_target, y_target, target_ids = build_xy(
         split_samples[args.split], prematch_by_id, meta_by_id, market_by_id, args.task
     )
+
+    # Early-stopping set: always use the validation season from the split config.
+    # When --split validation, the target split IS the validation season, so using
+    # the same data for early-stopping would let the model overfit to it and produce
+    # optimistic "validation" predictions.  We therefore use a held-out tail of the
+    # training set for early-stopping in that case, and the true validation season
+    # otherwise.
+    if args.split == "validation":
+        # Hold out the most recent 15% of training matches (by datetime) for early stopping.
+        train_ids_sorted = sorted(
+            [s["match_id"] for s in split_samples["train"]],
+            key=lambda mid: meta_dt_by_id.get(mid, ""),
+        )
+        n_es = max(1, int(len(train_ids_sorted) * 0.15))
+        es_ids = set(train_ids_sorted[-n_es:])
+        tr_ids_reduced = [s for s in split_samples["train"] if s["match_id"] not in es_ids]
+        es_ids_list = [{"match_id": mid} for mid in train_ids_sorted[-n_es:]]
+        X_train, y_train, _ = build_xy(tr_ids_reduced, prematch_by_id, meta_by_id, market_by_id, args.task)
+        X_es, y_es, _ = build_xy(es_ids_list, prematch_by_id, meta_by_id, market_by_id, args.task)
+        early_stop_set = (X_es, y_es)
+    else:
+        X_val, y_val, _ = build_xy(split_samples["validation"], prematch_by_id, meta_by_id, market_by_id, args.task)
+        early_stop_set = (X_val, y_val)
 
     print(f"Training LightGBM: task={args.task}, train={len(X_train)}, {args.split}={len(X_target)}")
 
@@ -132,7 +154,7 @@ def main():
     )
     model.fit(
         X_train, y_train,
-        eval_set=[(X_val, y_val)],
+        eval_set=[early_stop_set],
         callbacks=[lgb.early_stopping(50, verbose=False), lgb.log_evaluation(period=9999)],
     )
 

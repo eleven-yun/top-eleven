@@ -233,9 +233,12 @@ def run_issue_predict(
         print("  No matches found for this date in the dataset.")
         return []
 
-    # Use most recent val_fraction of train as early-stopping set
-    n_val = max(1, int(len(train_ids) * val_fraction))
-    val_ids_set = set(train_ids[-n_val:])
+    # Use most recent val_fraction of train as early-stopping set.
+    # Sort by datetime_utc so the "most recent" slice is chronologically correct
+    # (meta_records are grouped by league/season, not globally by date).
+    train_ids_sorted = sorted(train_ids, key=lambda mid: meta_by_id.get(mid, {}).get("datetime_utc", ""))
+    n_val = max(1, int(len(train_ids_sorted) * val_fraction))
+    val_ids_set = set(train_ids_sorted[-n_val:])
 
     all_picks = []
 
