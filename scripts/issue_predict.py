@@ -492,8 +492,10 @@ def main():
     print_summary(display_picks, args.date, args.ev_threshold, args.min_confidence)
 
     # Save JSON
-    output_path = args.output or os.path.join(ROOT, "output", "picks", f"{args.date}.json")
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output_path = os.path.abspath(args.output or os.path.join(ROOT, "output", "picks", f"{args.date}.json"))
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(
             {

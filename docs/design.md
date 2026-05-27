@@ -85,7 +85,7 @@ For all three play types, the fulltime component follows the same definition:
 |-----------|--------------|
 | Sport | Football only |
 | Product scope | Fulltime 1X2, HT/FT 1X2, Handicap 1X2 (all three heads trained) |
-| Leagues | 10 leagues across 5 countries (Bundesliga, 2.Bundesliga, Premier League, La Liga, Serie A, Ligue 1, Eredivisie, Primeira Liga, Süper Lig, Championship) |
+| Leagues | 10 leagues across 5 countries (England: Premier League, Championship; Germany: Bundesliga, 2. Bundesliga; Spain: La Liga, Segunda Division; Italy: Serie A, Serie B; France: Ligue 1, Ligue 2) |
 | Seasons | 6 seasons per league (2019/20 – 2024/25) |
 | Inputs | 46 pre-match features: team form, schedule, market odds (LightGBM); match-token embeddings (transformer, research path) |
 | Live info | Excluded |

@@ -160,8 +160,12 @@ def main():
 
     probs = model.predict_proba(X_target)
 
-    output_path = args.output or os.path.join(ROOT, "output", "predictions", f"{args.task}_{args.split}.jsonl")
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output_path = os.path.abspath(
+        args.output or os.path.join(ROOT, "output", "predictions", f"{args.task}_{args.split}.jsonl")
+    )
+    output_dir = os.path.dirname(output_path)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
 
     with open(output_path, "w", encoding="utf-8") as f:
         for mid, p, true_label in zip(target_ids, probs, y_target):

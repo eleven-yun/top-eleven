@@ -177,8 +177,8 @@ $$\text{Brier} = \frac{1}{N}\sum_i \sum_{k} (p_{ik} - y_{ik})^2$$
 ### ECE (Expected Calibration Error / 期望校准误差)
 Measures whether predicted probabilities match empirical frequencies.
 ECE = 0 means "when the model says 70% chance, it's right 70% of the time."
-ECE < 0.015 is considered well-calibrated. Our LightGBM model currently achieves
-ECE < 0.01, which is very good.
+ECE < 0.015 is often considered well-calibrated for this project; the exact
+value should be verified from the latest calibration report.
 
 ### Calibration (校准)
 The process of adjusting raw model output probabilities so they align with real
