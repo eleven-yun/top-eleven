@@ -378,8 +378,8 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split
 - [x] Wire per-task calibrated temperatures into training/inference pipeline end-to-end (`predict_lgbm.py`, `issue_predict.py` auto-load from reports)
 - [x] Implement isotonic regression diagnostics (`calibrate_isotonic.py`) as alternative
-- [ ] Compare pre/post calibration: ECE, Brier score, log loss on test split
-- [ ] Validate calibration on promoted-team match slice specifically
+- [x] Compare pre/post calibration: ECE, Brier score, log loss on test split
+- [x] Validate calibration on promoted-team match slice specifically
 
 ### 9C — Kelly Criterion Staking
 - [x] Implement fractional Kelly sizing in `cn_lottery_backtest.py` (`f = (p * odds - 1) / (odds - 1)`), with bankroll and max-stake cap
@@ -404,7 +404,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 ### Acceptance criteria
 - [ ] CN coverage ≥ 70% with pre-match odds scraper (current: 56.3%)
 - [ ] Calibration: ECE < 0.015 after temperature scaling
-- [ ] Kelly-sized backtest reported alongside flat-stake baseline
+- [x] Kelly-sized backtest reported alongside flat-stake baseline
 - [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)
 
 ---
