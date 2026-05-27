@@ -10,6 +10,7 @@ Usage:
 """
 import argparse
 import json
+import math
 import os
 import sys
 from collections import defaultdict
@@ -27,12 +28,24 @@ from data.data_loader import (
     split_samples_by_season,
 )
 from data.label_mapping import map_fulltime_label, map_htft_label, map_handicap_label
+from utils.calibration import resolve_task_temperature
 
 TASK_NUM_CLASSES = {
     "fulltime_label": 3,
     "htft_label": 9,
     "handicap_label": 3,
 }
+
+
+def apply_temperature(probs, temperature):
+    """Apply temperature scaling to a probability vector."""
+    if temperature <= 0 or abs(temperature - 1.0) < 1e-9:
+        return [float(x) for x in probs]
+    logs = [math.log(max(1e-12, float(p))) / temperature for p in probs]
+    m = max(logs)
+    exps = [math.exp(x - m) for x in logs]
+    z = sum(exps)
+    return [x / z for x in exps]
 
 
 def result_to_label(task, meta):
@@ -82,6 +95,17 @@ def main():
     parser.add_argument("--n-estimators", type=int, default=500)
     parser.add_argument("--learning-rate", type=float, default=0.05)
     parser.add_argument("--num-leaves", type=int, default=31)
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=None,
+        help="Manual probability temperature override (default: auto by task)",
+    )
+    parser.add_argument(
+        "--temperature-report-dir",
+        default="output/backtest",
+        help="Directory containing <task>_test_temperature_report.json",
+    )
     parser.add_argument("--output", default=None, help="Output JSONL path")
     args = parser.parse_args()
 
@@ -159,6 +183,14 @@ def main():
     )
 
     probs = model.predict_proba(X_target)
+    temperature, temperature_source = resolve_task_temperature(
+        root=ROOT,
+        task=args.task,
+        explicit_temperature=args.temperature,
+        report_dir=args.temperature_report_dir,
+    )
+    probs = np.array([apply_temperature(p, temperature) for p in probs], dtype=np.float32)
+    print(f"Using temperature={temperature:.4f} (source={temperature_source}) for task={args.task}")
 
     output_path = os.path.abspath(
         args.output or os.path.join(ROOT, "output", "predictions", f"{args.task}_{args.split}.jsonl")
@@ -176,6 +208,8 @@ def main():
                 "predicted_label": int(np.argmax(p)),
                 "true_label": int(true_label),
                 "datetime_utc": meta_dt_by_id.get(mid, ""),
+                "temperature": round(float(temperature), 6),
+                "temperature_source": temperature_source,
             }
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
 

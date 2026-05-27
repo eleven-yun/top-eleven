@@ -54,6 +54,7 @@ from data.data_loader import (
     extract_market_tokens,
 )
 from data.label_mapping import map_fulltime_label, map_handicap_label
+from utils.calibration import resolve_task_temperature
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -238,7 +239,8 @@ def run_issue_predict(
     min_confidence,
     max_picks=0,
     max_picks_per_league=0,
-    temperature=1.0,
+    temperature=None,
+    temperature_report_dir="output/backtest",
     bankroll=10000.0,
     kelly_fraction=0.5,
     kelly_min_stake=2.0,
@@ -295,10 +297,24 @@ def run_issue_predict(
     val_ids_set = set(train_ids_sorted[-n_val:])
 
     all_picks = []
+    temperature_by_task = {}
+    temperature_source_by_task = {}
 
     for task in tasks:
         num_class = TASK_NUM_CLASSES[task]
         play_type = TASK_PLAY_TYPE[task]
+        task_temperature, task_temperature_source = resolve_task_temperature(
+            root=root,
+            task=task,
+            explicit_temperature=temperature,
+            report_dir=temperature_report_dir,
+        )
+        temperature_by_task[task] = round(float(task_temperature), 6)
+        temperature_source_by_task[task] = task_temperature_source
+        print(
+            f"  [{task}] temperature={task_temperature:.4f} "
+            f"(source={task_temperature_source})"
+        )
 
         # Build train / val sets
         X_tr, y_tr, X_val_arr, y_val_arr = [], [], [], []
@@ -350,7 +366,7 @@ def run_issue_predict(
         for mid, probs in zip(tgt_ids_valid, probs_matrix):
             meta = meta_by_id.get(mid, {})
             pf = prematch_by_id.get(mid, {})
-            probs = apply_temperature(probs, temperature)
+            probs = apply_temperature(probs, task_temperature)
 
             # Odds dict for this task
             odds_dict = {}
@@ -391,6 +407,7 @@ def run_issue_predict(
                 "ev": pick["ev"],
                 "confidence": pick["prob"],
                 "all_probs": [round(float(p), 4) for p in probs],
+                "temperature": round(float(task_temperature), 6),
                 "stake_yuan": compute_kelly_stake(
                     prob=pick["prob"],
                     odds=pick["odds"],
@@ -430,7 +447,7 @@ def run_issue_predict(
                 new_stake = max(kelly_min_stake, round(old_stake * scale, 2))
                 p["stake_yuan"] = new_stake
 
-    return all_picks
+    return all_picks, temperature_by_task, temperature_source_by_task
 
 
 # ---------------------------------------------------------------------------
@@ -554,8 +571,13 @@ def main():
     parser.add_argument(
         "--temperature",
         type=float,
-        default=1.04,
-        help="Probability temperature scaling (1.0 = no scaling)",
+        default=None,
+        help="Manual probability temperature override (default: auto by task)",
+    )
+    parser.add_argument(
+        "--temperature-report-dir",
+        default="output/backtest",
+        help="Directory containing <task>_test_temperature_report.json",
     )
     parser.add_argument("--bankroll", type=float, default=10000.0, help="Bankroll used for Kelly stake suggestions")
     parser.add_argument("--kelly-fraction", type=float, default=0.5, help="Fractional Kelly multiplier (0 disables Kelly)")
@@ -597,7 +619,7 @@ def main():
         print("No valid tasks specified.")
         sys.exit(1)
 
-    picks = run_issue_predict(
+    picks, temperature_by_task, temperature_source_by_task = run_issue_predict(
         pred_date_str=args.date,
         tasks=tasks,
         ev_threshold=args.ev_threshold,
@@ -605,6 +627,7 @@ def main():
         max_picks=args.max_picks,
         max_picks_per_league=args.max_picks_per_league,
         temperature=args.temperature,
+        temperature_report_dir=args.temperature_report_dir,
         bankroll=args.bankroll,
         kelly_fraction=args.kelly_fraction,
         kelly_min_stake=args.kelly_min_stake,
@@ -634,6 +657,8 @@ def main():
                 "ev_threshold": args.ev_threshold,
                 "min_confidence": args.min_confidence,
                 "temperature": args.temperature,
+                "temperature_by_task": temperature_by_task,
+                "temperature_source_by_task": temperature_source_by_task,
                 "bankroll": args.bankroll,
                 "kelly_fraction": args.kelly_fraction,
                 "kelly_min_stake": args.kelly_min_stake,
