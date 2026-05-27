@@ -58,14 +58,15 @@ graph LR;
 
 ---
 
-## Quick Start — Daily Pick Generation (Phase 7)
+## Quick Start — Issue-Date Pick Generation (Phase 7)
 
-Generate today's pre-match picks in ~30 seconds:
+Generate issue-date picks in ~30 seconds (historical/simulation workflow):
 
 ```bash
 conda activate top-eleven
 
-# Picks for today (trains on all historical data before today)
+# Default date is today; this works only when that date already has completed
+# matches in the local dataset (replay/simulation use-case)
 python scripts/issue_predict.py
 
 # Picks for a specific date (simulation/backtest mode)
@@ -90,10 +91,12 @@ python scripts/issue_predict.py --date 2025-03-15 \
 **Output**: CLI pick slip table + JSON file at `output/picks/<date>.json`
 
 > **Note on odds**: The current pipeline uses European bookmaker odds as a proxy.
-> China Lottery parimutuel odds differ (higher take-out ~35%). Once real
-> China Lottery odds are available, use `lottery_market_cn.jsonl` with the
-> scripts that support `--market` (for example `backtest_ev.py` or
-> `cn_lottery_backtest.py`).
+> China Lottery parimutuel odds differ (higher take-out ~35%).
+> `lottery_market_cn.jsonl` from `fetch_cn_odds.py` stores post-match settlement
+> SP for the realized outcome only, so it should not be used with
+> `backtest_ev.py --market` for pre-match EV screening.
+> Use it only in settlement-aware analysis paths (for example
+> `cn_lottery_backtest.py`) or replace it with true pre-match snapshots.
 
 ---
 

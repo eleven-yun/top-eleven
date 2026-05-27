@@ -192,7 +192,7 @@ def parse_page(html: str, date_str: str) -> list[dict]:
                 "actual_result": result_label,
                 "actual_sp": h_sp,
                 "odds_capture_time": capture_time,
-                "odds_stage": "closing",
+                "odds_stage": "postmatch_settlement",
             })
 
         # 胜平负 (fulltime 1X2)
@@ -224,7 +224,7 @@ def parse_page(html: str, date_str: str) -> list[dict]:
                 "actual_result": result_label,
                 "actual_sp": nspf_val,
                 "odds_capture_time": capture_time,
-                "odds_stage": "closing",
+                "odds_stage": "postmatch_settlement",
             })
 
     return records

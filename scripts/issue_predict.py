@@ -155,10 +155,15 @@ def label_for_task(task, meta):
         if task == "fulltime_label":
             return map_fulltime_label(meta.get("final_result", ""))
         if task == "handicap_label":
+            home_goals = meta.get("home_goals")
+            away_goals = meta.get("away_goals")
+            handicap_line = meta.get("handicap_line")
+            if home_goals is None or away_goals is None or handicap_line is None:
+                return -1
             return map_handicap_label(
-                meta.get("home_goals", 0),
-                meta.get("away_goals", 0),
-                meta.get("handicap_line"),
+                home_goals,
+                away_goals,
+                handicap_line,
             )
     except (ValueError, TypeError):
         pass
