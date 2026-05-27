@@ -33,7 +33,6 @@ HEADERS = {
     "Accept-Language": "zh-CN,zh;q=0.9",
     "Referer": "https://zx.500.com/jczq/kaijiang.php",
 }
-
 # SP values after the score column:
 # <td>&nbsp;</td><td>RESULT</td><td class="eng"><span ...>SP_VALUE</span></td>
 SP_BLOCK = re.compile(

@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-China Lottery backtest: compare European odds proxy vs actual lottery SP payouts.
+China Lottery backtest: compare EU proxy, CN SP, and pre-match closing payouts.
 
 Pipeline:
 1. Load model predictions (from predict_lgbm.py JSONL output)
 2. Load existing European odds (lottery_market.jsonl) — used for EV filtering
 3. Load China Lottery SP data (from fetch_cn_odds.py + enrich_lottery_odds.py)
-4. For each bet placed (based on European odds EV filter):
-    a. If we have a matching China Lottery SP for the bet outcome → use lottery payout
-    b. Otherwise → track only in a separate "CN+EU fallback" column
-5. Report both pure CN-covered ROI and mixed fallback ROI with coverage
+4. Optionally load pre-match CN closing odds (from fetch_cn_prematch_odds.py + enrich_prematch_odds.py)
+5. For each bet placed (based on European odds EV filter):
+   a. Compute pure CN-covered ROI only when payout can be evaluated from matched CN settlement rows
+   b. Compute a separate CN+EU fallback ROI for all bets (fallback to EU when CN payout is unavailable)
+   c. Compute a pre-match closing ROI column (fallback to EU when pre-match odds are unavailable)
+6. Report ROI and coverage for all columns
 
 Usage:
     python scripts/cn_lottery_backtest.py \\
@@ -25,7 +27,6 @@ Output: Console table + output/backtest/handicap_test_cn_comparison.json
 
 import argparse
 import json
-from collections import defaultdict
 from pathlib import Path
 
 
@@ -69,6 +70,18 @@ def build_market_index(market_rows: list[dict], play_type: str) -> dict:
     return index
 
 
+def build_prematch_index(market_rows: list[dict], play_type: str) -> dict:
+    """Index pre-match market rows by match_id, filtering to a specific play_type."""
+    index = {}
+    for row in market_rows:
+        if row.get("play_type") != play_type:
+            continue
+        mid = row.get("match_id")
+        if mid and mid not in index:
+            index[mid] = row
+    return index
+
+
 def get_odds_for_outcome(market_row: dict, outcome: str) -> float | None:
     """Extract the odds for a specific outcome from a market row."""
     odds_key = OUTCOME_TO_ODDS_KEY.get(outcome)
@@ -77,16 +90,24 @@ def get_odds_for_outcome(market_row: dict, outcome: str) -> float | None:
     return market_row.get(odds_key)
 
 
+def get_prematch_odds_for_outcome(market_row: dict, outcome: str) -> float | None:
+    """Extract closing odds for a specific outcome from a pre-match market row."""
+    mapping = {"home": "home_odds", "draw": "draw_odds", "away": "away_odds"}
+    closing = market_row.get("closing_odds") or {}
+    return closing.get(mapping.get(outcome, ""))
+
+
 def simulate(
     predictions: list[dict],
     eu_index: dict,
     cn_index: dict,
+    prematch_index: dict,
     task: str,
     ev_threshold: float,
     min_confidence: float,
     stake: float = 2.0,
 ) -> dict:
-    """Run the simulation and return stats for both EU and CN odds."""
+    """Run the simulation and return stats for EU, CN SP, CN+EU fallback, and pre-match odds."""
     play_type = TASK_PLAY_TYPE[task]
 
     n_total = 0
@@ -96,6 +117,8 @@ def simulate(
     cn_bets = cn_profit = 0.0
     cn_fallback_bets = cn_fallback_profit = 0.0
     cn_covered = 0  # bets where a CN market row matched by match_id
+    prematch_bets = prematch_profit = 0.0
+    prematch_covered = 0  # bets where pre-match closing odds were available
 
     for pred in predictions:
         match_id = pred.get("match_id")
@@ -174,9 +197,30 @@ def simulate(
             else:
                 cn_fallback_profit -= stake
 
+        # ---- Pre-match closing payout ----
+        prematch_row = prematch_index.get(match_id)
+        prematch_odds = None
+        if prematch_row is not None:
+            prematch_odds = get_prematch_odds_for_outcome(prematch_row, best_outcome)
+
+        prematch_bets += 1
+        if prematch_odds is not None:
+            prematch_covered += 1
+            if actual_outcome == best_outcome:
+                prematch_profit += prematch_odds * stake - stake
+            else:
+                prematch_profit -= stake
+        else:
+            # Fall back to EU odds
+            if actual_outcome == best_outcome:
+                prematch_profit += eu_odds_bet * stake - stake
+            else:
+                prematch_profit -= stake
+
     eu_staked = eu_bets * stake
     cn_staked = cn_bets * stake
     cn_fallback_staked = cn_fallback_bets * stake
+    prematch_staked = prematch_bets * stake
 
     return {
         "total_predictions": n_total,
@@ -197,6 +241,24 @@ def simulate(
         "cn_fallback_roi_pct": round(cn_fallback_profit / cn_fallback_staked * 100, 2)
         if cn_fallback_staked > 0
         else 0,
+        "prematch_bets": int(prematch_bets),
+        "prematch_covered": prematch_covered,
+        "prematch_coverage_pct": round(prematch_covered / prematch_bets * 100, 1) if prematch_bets > 0 else 0,
+        "prematch_profit": round(prematch_profit, 2),
+        "prematch_staked": round(prematch_staked, 2),
+        "prematch_roi_pct": round(prematch_profit / prematch_staked * 100, 2) if prematch_staked > 0 else 0,
+        "cn_fallback_bets": int(cn_fallback_bets),
+        "cn_fallback_profit": round(cn_fallback_profit, 2),
+        "cn_fallback_staked": round(cn_fallback_staked, 2),
+        "cn_fallback_roi_pct": round(cn_fallback_profit / cn_fallback_staked * 100, 2)
+        if cn_fallback_staked > 0
+        else 0,
+        "prematch_bets": int(prematch_bets),
+        "prematch_covered": prematch_covered,
+        "prematch_coverage_pct": round(prematch_covered / prematch_bets * 100, 1) if prematch_bets > 0 else 0,
+        "prematch_profit": round(prematch_profit, 2),
+        "prematch_staked": round(prematch_staked, 2),
+        "prematch_roi_pct": round(prematch_profit / prematch_staked * 100, 2) if prematch_staked > 0 else 0,
         "ev_threshold": ev_threshold,
         "min_confidence": min_confidence,
         "stake_per_bet": stake,
@@ -204,7 +266,7 @@ def simulate(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare EU odds vs CN Lottery SP in backtest")
+    parser = argparse.ArgumentParser(description="Compare EU odds vs CN Lottery SP vs pre-match CN closing odds")
     parser.add_argument(
         "--predictions",
         default=None,
@@ -220,6 +282,11 @@ def main():
         default="data/processed/lottery_market_cn.jsonl",
         help="China Lottery SP market JSONL (from enrich_lottery_odds.py)",
     )
+    parser.add_argument(
+        "--prematch-market",
+        default="data/processed/lottery_market_prematch_cn.jsonl",
+        help="Pre-match CN closing market JSONL (from enrich_prematch_odds.py)",
+    )
     parser.add_argument("--task", default="handicap_label", choices=list(TASK_PLAY_TYPE))
     parser.add_argument("--ev-threshold", type=float, default=0.05)
     parser.add_argument("--min-confidence", type=float, default=0.55)
@@ -233,6 +300,7 @@ def main():
     pred_path = root / args.predictions if not Path(args.predictions).is_absolute() else Path(args.predictions)
     eu_path = root / args.eu_market if not Path(args.eu_market).is_absolute() else Path(args.eu_market)
     cn_path = root / args.cn_market if not Path(args.cn_market).is_absolute() else Path(args.cn_market)
+    prematch_path = root / args.prematch_market if not Path(args.prematch_market).is_absolute() else Path(args.prematch_market)
 
     print(f"Loading predictions: {pred_path}")
     predictions = load_jsonl(str(pred_path))
@@ -252,10 +320,20 @@ def main():
     else:
         print(f"  CN market not found at {cn_path}, will use EU odds for all bets")
 
+    prematch_index = {}
+    if prematch_path.exists():
+        print(f"Loading pre-match market: {prematch_path}")
+        prematch_rows = load_jsonl(str(prematch_path))
+        prematch_index = build_prematch_index(prematch_rows, TASK_PLAY_TYPE[args.task])
+        print(f"  {len(prematch_index)} pre-match matches indexed")
+    else:
+        print(f"  Pre-match market not found at {prematch_path}, will use EU odds for all bets")
+
     results = simulate(
         predictions,
         eu_index,
         cn_index,
+        prematch_index,
         task=args.task,
         ev_threshold=args.ev_threshold,
         min_confidence=args.min_confidence,
@@ -265,24 +343,27 @@ def main():
     print("\n" + "=" * 60)
     print(f"Task: {args.task}  |  EV≥{args.ev_threshold}  conf≥{args.min_confidence}")
     print("=" * 60)
-    print(f"{'Metric':<30} {'EU Odds':>12} {'CN Lottery':>12} {'CN+EU fallback':>16}")
+    print(f"{'Metric':<30} {'EU Odds':>12} {'CN Lottery':>12} {'CN+EU fallback':>16} {'Pre-match':>12}")
     print("-" * 60)
     print(
         f"{'Bets placed':<30} {results['eu_bets']:>12} {results['cn_bets']:>12} "
-        f"{results['cn_fallback_bets']:>16}"
+        f"{results['cn_fallback_bets']:>16} {results['prematch_bets']:>12}"
     )
-    print(f"{'CN SP coverage':<30} {'':>12} {results['cn_coverage_pct']:>11.1f}% {'':>16}")
+    print(
+        f"{'Coverage':<30} {'':>12} {results['cn_coverage_pct']:>11.1f}% "
+        f"{'':>16} {results['prematch_coverage_pct']:>11.1f}%"
+    )
     print(
         f"{'Staked':<30} {'¥'+str(results['eu_staked']):>12} {'¥'+str(results['cn_staked']):>12} "
-        f"{'¥'+str(results['cn_fallback_staked']):>16}"
+        f"{'¥'+str(results['cn_fallback_staked']):>16} {'¥'+str(results['prematch_staked']):>12}"
     )
     print(
         f"{'Profit':<30} {'¥'+str(results['eu_profit']):>12} {'¥'+str(results['cn_profit']):>12} "
-        f"{'¥'+str(results['cn_fallback_profit']):>16}"
+        f"{'¥'+str(results['cn_fallback_profit']):>16} {'¥'+str(results['prematch_profit']):>12}"
     )
     print(
         f"{'ROI':<30} {str(results['eu_roi_pct'])+'%':>12} {str(results['cn_roi_pct'])+'%':>12} "
-        f"{str(results['cn_fallback_roi_pct'])+'%':>16}"
+        f"{str(results['cn_fallback_roi_pct'])+'%':>16} {str(results['prematch_roi_pct'])+'%':>12}"
     )
     print("=" * 60)
 

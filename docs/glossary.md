@@ -235,7 +235,7 @@ The fulltime 1X2 play type in CN lottery without handicap. "N" stands for "norma
 ### 500.com
 A major Chinese sports data and lottery platform (`500.com`). Provides:
 - Post-match SP payouts at `zx.500.com/jczq/kaijiang.php?d=YYYY-MM-DD`
-- Pre-match odds at `odds.500.com` (not yet scraped)
+- Pre-match odds via `zx.500.com/jczq/kaijiang.php` (`step=readpl`) for SPF/NSPF
 
 Pages use GB2312 encoding (not UTF-8).
 
@@ -244,12 +244,11 @@ Pages use GB2312 encoding (not UTF-8).
 ## Project-Specific Terms
 
 ### EU Odds Proxy
-Since we don't (yet) have pre-match CN lottery odds for all 3 outcomes, we use
-European bookmaker closing odds (from football-data.co.uk) as a substitute for EV
-calculation. The assumption is that EU market odds are an accurate reflection of
-true outcome probabilities, and CN lottery odds (SP) will be proportional.
+EU bookmaker closing odds (football-data.co.uk) are still used as a fallback when
+CN odds are unavailable for a matched test bet.
 
-Phase 9 goal: replace the proxy with real pre-match CN odds.
+After Phase 9A, the primary CN comparison now includes pre-match CN closing odds
+for EV-aligned payout evaluation.
 
 ### Match Coverage (匹配率)
 Percentage of scraped CN lottery records that we successfully linked to a match in

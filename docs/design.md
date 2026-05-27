@@ -86,12 +86,12 @@ For all three play types, the fulltime component follows the same definition:
 | Sport | Football only |
 | Product scope | Fulltime 1X2, HT/FT 1X2, Handicap 1X2 (all three heads trained) |
 | Leagues | 10 leagues across 5 countries (England: Premier League, Championship; Germany: Bundesliga, 2. Bundesliga; Spain: La Liga, Segunda Division; Italy: Serie A, Serie B; France: Ligue 1, Ligue 2) |
-| Seasons | 6 seasons per league (2019/20 – 2024/25) |
+| Seasons | 7 seasons per league (2019/20 – 2025/26) |
 | Inputs | 46 pre-match features: team form, schedule, market odds (LightGBM); match-token embeddings (transformer, research path) |
 | Live info | Excluded |
 | Commentary/video | Excluded |
-| Real odds | Integrated: 500.com CN lottery post-match SP (`fetch_cn_odds.py`), ~46% match coverage on test split |
-| Pre-match CN odds | Not yet scraped — would replace EU odds proxy for EV calculation |
+| Real odds | Integrated: 500.com CN lottery post-match SP (`fetch_cn_odds.py`), 23.2% coverage on 2025/26 test bets |
+| Pre-match CN odds | Integrated: `fetch_cn_prematch_odds.py` + `enrich_prematch_odds.py`, 56.3% coverage on 2025/26 test bets |
 | Promotion/relegation features | Deferred — not yet in feature set |
 | Lineup/player features | Deferred |
 
@@ -105,14 +105,15 @@ For all three play types, the fulltime component follows the same definition:
 | Fulltime 1X2 | 1.0054 | 50.2% | — | — | No betting edge at any threshold |
 | HT/FT 1X2 | 1.9081 | 30.4% | — | — | No betting edge at any threshold |
 
-**Betting backtest (Handicap 1X2, EV≥0.05, conf≥0.55, test split 2024/25):**
+**Betting backtest (Handicap 1X2, EV≥0.05, conf≥0.55, test split 2025/26):**
 
-| Odds source | Bets | ROI | Hit-rate |
+| Odds source | Bets | ROI | Coverage |
 |-------------|------|-----|----------|
-| EU bookmaker proxy (football-data.co.uk) | 1216 | +4.32% | 55.5% |
-| CN+EU fallback settlement (500.com, 20% CN coverage) | 1216 | +7.19% | 55.5% |
+| EU bookmaker proxy (football-data.co.uk) | 861 | +1.67% | 100% |
+| CN+EU fallback settlement (500.com post-match SP) | 861 | +3.96% | 23.2% |
+| CN pre-match closing odds (500.com readpl API) | 861 | +9.71% | 56.3% |
 
-Best EV threshold (≥0.08): EU +4.64% / CN+EU fallback +7.60% on 984 bets.
+Pre-match closing odds materially improve both coverage and realized ROI versus CN SP.
 
 Transformer (match-token embedding) remains a research path — LightGBM dominates
 for all three tasks (ensemble with transformer adds no lift).

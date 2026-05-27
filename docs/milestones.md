@@ -364,11 +364,15 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 *Goal: improve probability reliability and bet-sizing before live deployment.*
 
 ### 9A — Pre-Match CN Odds Scraper (highest priority)
-- [ ] Scrape 500.com pre-match odds page (all 3 outcomes available before kick-off)
+- [x] Scrape 500.com pre-match odds page (all 3 outcomes available before kick-off)
   - Target: `https://odds.500.com/fenxi/` or equivalent endpoint
   - Allows true EV calculation with CN odds instead of EU proxy
-- [ ] Update `enrich_lottery_odds.py` to handle pre-match CN odds format
-- [ ] Re-run backtest with full CN EV filtering → target ~80% CN coverage
+- [x] Implement pre-match enrichment pipeline (`enrich_prematch_odds.py`) to map pre-match CN odds to `match_id`
+- [x] Re-run backtest with pre-match CN odds
+  - 2025/26 test split (EV≥0.05, conf≥0.55):
+    - EU ROI: +1.67%
+    - CN SP ROI: +3.96% (23.2% coverage)
+    - Pre-match ROI: +9.71% (56.3% coverage)
 
 ### 9B — Probability Calibration
 - [ ] Implement temperature scaling (per-task) on validation set
@@ -382,16 +386,16 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [ ] Report Kelly-sized profit alongside flat-stake profit in backtest output
 
 ### 9D — Dataset Refresh (2025/26 season)
-- [ ] Pull 2025/26 season data via `build_dataset.py` once season completes
-- [ ] Retrain LightGBM on 2020/21–2023/24 train, 2024/25 val, 2025/26 test
-- [ ] Evaluate whether ROI holds on new out-of-sample season
-- [ ] Re-scrape 500.com CN lottery SP for 2025/26 period
+- [x] Pull 2025/26 season data via `build_dataset.py` once season completes
+- [x] Retrain LightGBM on 2019/20–2023/24 train, 2024/25 val, 2025/26 test
+- [x] Evaluate whether ROI holds on new out-of-sample season
+- [x] Re-scrape 500.com CN lottery SP for 2025/26 period
 
 ### Acceptance criteria
-- [ ] CN SP coverage ≥ 70% with pre-match odds scraper
+- [ ] CN coverage ≥ 70% with pre-match odds scraper (current: 56.3%)
 - [ ] Calibration: ECE < 0.015 after temperature scaling
 - [ ] Kelly-sized backtest reported alongside flat-stake baseline
-- [ ] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)
+- [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)
 
 ---
 
