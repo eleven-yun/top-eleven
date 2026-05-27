@@ -393,6 +393,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Add exposure caps to issue generation (`--max-picks`, `--max-picks-per-league`)
 - [x] Add bankroll-aware capped Kelly stake suggestions in issue generation (`--bankroll`, `--kelly-*`, `--max-total-stake-pct`)
 - [x] Add monthly robustness report (`robustness_time_slices.py`)
+- [x] Add walk-forward monthly retuning report (`walkforward_monthly_retune.py`) to reduce threshold look-ahead risk
 
 ### 9D — Dataset Refresh (2025/26 season)
 - [x] Pull 2025/26 season data via `build_dataset.py` once season completes
