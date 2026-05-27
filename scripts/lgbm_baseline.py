@@ -45,21 +45,6 @@ TASK_NUM_CLASSES = {
     "handicap_label": 3,
 }
 
-LABEL_KEY_TO_META_FIELD = {
-    "fulltime_label": "final_result",
-    "htft_label": "htft_result",
-    "handicap_label": "handicap_result",
-}
-
-FULLTIME_CLASSES = {"home_win": 0, "draw": 1, "away_win": 2}
-HANDICAP_CLASSES = {"home_win": 0, "draw": 1, "away_win": 2}
-
-HTFT_CLASSES = {
-    "HH": 0, "HD": 1, "HA": 2,
-    "DH": 3, "DD": 4, "DA": 5,
-    "AH": 6, "AD": 7, "AA": 8,
-}
-
 
 def result_to_label(task, meta):
     try:

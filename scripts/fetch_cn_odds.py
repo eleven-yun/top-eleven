@@ -33,20 +33,6 @@ HEADERS = {
     "Referer": "https://zx.500.com/jczq/kaijiang.php",
 }
 
-# Regex patterns for parsing the kaijiang page
-# Match a table row containing a lottery issue number
-ROW_PATTERN = re.compile(
-    r"<tr>\s*"
-    r"<td[^>]*>(周[一二三四五六日]\d+)</td>\s*"  # issue_no
-    r"<td[^>]*><a[^>]+>([^<]+)</a></td>\s*"     # league
-    r'<td[^>]*class="eng"[^>]*>([^<]+)</td>\s*'  # kickoff
-    r'<td[^>]*><a[^>]+>([^<]+)</a></td>\s*'       # home team
-    r'<td[^>]*class="eng"[^>]*>[^>]*>([^<]*)</span></td>\s*'  # handicap
-    r'<td[^>]*><a[^>]+>([^<]+)</a></td>\s*'       # away team
-    r'<td[^>]*class="eng"[^>]*>([^<]+)</td>',      # score
-    re.DOTALL,
-)
-
 # SP values after the score column:
 # <td>&nbsp;</td><td>RESULT</td><td class="eng"><span ...>SP_VALUE</span></td>
 SP_BLOCK = re.compile(
@@ -143,8 +129,6 @@ def parse_page(html: str, date_str: str) -> list[dict]:
         # 1st: 让球胜平负 (handicap 1X2) — stat="SPF"
         # 2nd: 胜平负 (fulltime 1X2) — stat="NSPF"
         # Each block: <td>&nbsp;</td><td>RESULT</td><td ...><span...>SP</span></td>
-        sp_blocks = SP_BLOCK.findall(row)
-
         # Get remaining row HTML after main fields
         after_score_idx = m.end()
         remaining = row[after_score_idx:]
@@ -161,19 +145,6 @@ def parse_page(html: str, date_str: str) -> list[dict]:
 
         # Build records for each play type
         capture_time = f"{date_str}T23:59:59+08:00"
-
-        def _parse_handicap(h: str) -> float | None:
-            h = h.replace("\xa0", "").strip()
-            # Remove HTML artifacts
-            h = re.sub(r"<[^>]+>", "", h).strip()
-            if not h or h in ("0", "平"):
-                return 0.0
-            try:
-                return float(h)
-            except ValueError:
-                return None
-
-        handicap_val = _parse_handicap(handicap_raw)
 
         # 让球胜平负 (handicap 1X2)
         if spf_sp:

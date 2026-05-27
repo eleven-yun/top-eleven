@@ -35,7 +35,7 @@ for EV in 0.00 0.02 0.05 0.10 0.15 0.20; do
         --task "${TASK}" \
         --ev-threshold "${EV}" \
         --max-one-bet-per-match \
-        --output "output/backtest/${TASK}_${SPLIT}_ev${EV}.json" 2>/dev/null
+        --output "output/backtest/${TASK}_${SPLIT}_ev${EV}.json"
     done
   done
 done
@@ -53,7 +53,7 @@ for CONF in 0.0 0.40 0.50 0.55 0.60; do
       --min-confidence "${CONF}" \
       --max-one-bet-per-match \
       --save-bets \
-      --output "output/backtest/handicap_${SPLIT}_ev0.05_conf${CONF}.json" 2>/dev/null
+      --output "output/backtest/handicap_${SPLIT}_ev0.05_conf${CONF}.json"
   done
 done
 
@@ -70,7 +70,7 @@ for EV in 0.00 0.02 0.05 0.10 0.15 0.20; do
   for SPLIT in validation test; do
     F="output/backtest/handicap_label_${SPLIT}_ev${EV}.json"
     if [[ -f "$F" ]]; then
-      EV_VAL="$EV" SPLIT_VAL="$SPLIT" F_VAL="$F" conda run -n top-eleven python3 - <<'PYEOF'
+      EV_VAL="$EV" SPLIT_VAL="$SPLIT" F_VAL="$F" conda run -n top-eleven python - <<'PYEOF'
 import json, os
 r = json.loads(open(os.environ["F_VAL"]).read())
 ev = os.environ["EV_VAL"]
@@ -88,7 +88,7 @@ for CONF in 0.0 0.40 0.50 0.55 0.60; do
   for SPLIT in validation test; do
     F="output/backtest/handicap_${SPLIT}_ev0.05_conf${CONF}.json"
     if [[ -f "$F" ]]; then
-      CONF_VAL="$CONF" SPLIT_VAL="$SPLIT" F_VAL="$F" conda run -n top-eleven python3 - <<'PYEOF'
+      CONF_VAL="$CONF" SPLIT_VAL="$SPLIT" F_VAL="$F" conda run -n top-eleven python - <<'PYEOF'
 import json, os
 r = json.loads(open(os.environ["F_VAL"]).read())
 conf = os.environ["CONF_VAL"]

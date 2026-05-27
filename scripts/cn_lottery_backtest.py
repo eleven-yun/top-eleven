@@ -71,8 +71,10 @@ def build_market_index(market_rows: list[dict], play_type: str) -> dict:
 
 def get_odds_for_outcome(market_row: dict, outcome: str) -> float | None:
     """Extract the odds for a specific outcome from a market row."""
-    mapping = {"home": "home_odds", "draw": "draw_odds", "away": "away_odds"}
-    return market_row.get(mapping.get(outcome, ""))
+    odds_key = OUTCOME_TO_ODDS_KEY.get(outcome)
+    if odds_key is None:
+        return None
+    return market_row.get(odds_key)
 
 
 def simulate(
@@ -168,6 +170,7 @@ def simulate(
 
     return {
         "total_predictions": n_total,
+        "ev_filtered_predictions": n_ev_filtered,
         "eu_bets": int(eu_bets),
         "eu_profit": round(eu_profit, 2),
         "eu_staked": round(eu_staked, 2),
