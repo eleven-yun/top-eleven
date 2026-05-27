@@ -381,10 +381,16 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [ ] Validate calibration on promoted-team match slice specifically
 
 ### 9C — Kelly Criterion Staking
-- [ ] Implement fractional Kelly sizing (`f = (p * odds - 1) / (odds - 1)`, half-Kelly default)
+- [x] Implement fractional Kelly sizing in `cn_lottery_backtest.py` (`f = (p * odds - 1) / (odds - 1)`), with bankroll and max-stake cap
 - [x] Add `--kelly-fraction` flag to `cn_lottery_backtest.py` (with bankroll and max-stake cap)
 - [ ] Add `--kelly-fraction` flag to `backtest_ev.py`
-- [ ] Report Kelly-sized profit alongside flat-stake profit in backtest output
+- [x] Report Kelly-sized bankroll/ROI/max-drawdown alongside flat-stake backtest output (`cn_lottery_backtest.py`)
+
+### 9E — Risk Controls and Robustness
+- [x] Add strategy threshold grid optimizer (`optimize_cn_strategy.py`)
+- [x] Tune profit-max profile on 2025/26 (`EV≥0.02`, `conf≥0.51`)
+- [x] Add exposure caps to issue generation (`--max-picks`, `--max-picks-per-league`)
+- [x] Add monthly robustness report (`robustness_time_slices.py`)
 
 ### 9D — Dataset Refresh (2025/26 season)
 - [x] Pull 2025/26 season data via `build_dataset.py` once season completes

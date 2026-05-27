@@ -206,6 +206,8 @@ def run_issue_predict(
     tasks,
     ev_threshold,
     min_confidence,
+    max_picks=0,
+    max_picks_per_league=0,
     root=ROOT,
     val_fraction=0.15,
 ):
@@ -358,6 +360,21 @@ def run_issue_predict(
             })
 
     all_picks.sort(key=lambda x: -x["ev"])
+
+    # Exposure caps: keep highest-EV picks while limiting concentration.
+    if max_picks > 0 or max_picks_per_league > 0:
+        capped = []
+        by_league = defaultdict(int)
+        for p in all_picks:
+            lg = p.get("league") or "UNK"
+            if max_picks_per_league > 0 and by_league[lg] >= max_picks_per_league:
+                continue
+            if max_picks > 0 and len(capped) >= max_picks:
+                break
+            capped.append(p)
+            by_league[lg] += 1
+        all_picks = capped
+
     return all_picks
 
 
@@ -469,6 +486,18 @@ def main():
     parser.add_argument("--ev-threshold", type=float, default=0.02)
     parser.add_argument("--min-confidence", type=float, default=0.51)
     parser.add_argument(
+        "--max-picks",
+        type=int,
+        default=0,
+        help="Maximum number of picks to keep after EV ranking (0 = no cap)",
+    )
+    parser.add_argument(
+        "--max-picks-per-league",
+        type=int,
+        default=0,
+        help="Maximum picks per league code (0 = no cap)",
+    )
+    parser.add_argument(
         "--output",
         default=None,
         help="Save picks JSON to this path (default: output/picks/<date>.json)",
@@ -491,6 +520,8 @@ def main():
         tasks=tasks,
         ev_threshold=args.ev_threshold,
         min_confidence=args.min_confidence,
+        max_picks=args.max_picks,
+        max_picks_per_league=args.max_picks_per_league,
     )
 
     # Optionally truncate for display
@@ -513,6 +544,8 @@ def main():
                 "prediction_date": args.date,
                 "ev_threshold": args.ev_threshold,
                 "min_confidence": args.min_confidence,
+                "max_picks": args.max_picks,
+                "max_picks_per_league": args.max_picks_per_league,
                 "total_picks": len(picks),
                 "total_stake_yuan": len(picks) * STAKE_PER_BET,
                 "picks": picks,
