@@ -377,7 +377,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 ### 9B — Probability Calibration
 - [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split
 - [ ] Wire per-task calibrated temperatures into training/inference pipeline end-to-end
-- [ ] Implement isotonic regression calibration as alternative
+- [x] Implement isotonic regression diagnostics (`calibrate_isotonic.py`) as alternative
 - [ ] Compare pre/post calibration: ECE, Brier score, log loss on test split
 - [ ] Validate calibration on promoted-team match slice specifically
 
@@ -391,6 +391,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Add strategy threshold grid optimizer (`optimize_cn_strategy.py`)
 - [x] Tune profit-max profile on 2025/26 (`EV≥0.02`, `conf≥0.51`)
 - [x] Add exposure caps to issue generation (`--max-picks`, `--max-picks-per-league`)
+- [x] Add bankroll-aware capped Kelly stake suggestions in issue generation (`--bankroll`, `--kelly-*`, `--max-total-stake-pct`)
 - [x] Add monthly robustness report (`robustness_time_slices.py`)
 
 ### 9D — Dataset Refresh (2025/26 season)

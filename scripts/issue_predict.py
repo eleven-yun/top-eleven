@@ -121,6 +121,24 @@ def apply_temperature(probs, temperature):
     return [x / z for x in exps]
 
 
+def compute_kelly_stake(prob, odds, bankroll, kelly_fraction, min_stake, max_stake_pct):
+    """Compute capped fractional-Kelly stake for one pick.
+
+    If Kelly is disabled or invalid, return flat minimum stake.
+    """
+    if kelly_fraction <= 0 or bankroll <= 0 or odds is None or odds <= 1.0:
+        return float(min_stake)
+    b = odds - 1.0
+    full_kelly = (prob * odds - 1.0) / b if b > 0 else 0.0
+    full_kelly = max(0.0, min(1.0, full_kelly))
+    f = kelly_fraction * full_kelly
+    stake = bankroll * f
+    stake = max(float(min_stake), stake)
+    if max_stake_pct > 0:
+        stake = min(stake, bankroll * max_stake_pct)
+    return round(max(0.0, stake), 2)
+
+
 # ---------------------------------------------------------------------------
 # Data loading & feature building
 # ---------------------------------------------------------------------------
@@ -221,6 +239,11 @@ def run_issue_predict(
     max_picks=0,
     max_picks_per_league=0,
     temperature=1.0,
+    bankroll=10000.0,
+    kelly_fraction=0.5,
+    kelly_min_stake=2.0,
+    kelly_max_stake_pct=0.03,
+    max_total_stake_pct=0.12,
     root=ROOT,
     val_fraction=0.15,
 ):
@@ -368,7 +391,14 @@ def run_issue_predict(
                 "ev": pick["ev"],
                 "confidence": pick["prob"],
                 "all_probs": [round(float(p), 4) for p in probs],
-                "stake_yuan": STAKE_PER_BET,
+                "stake_yuan": compute_kelly_stake(
+                    prob=pick["prob"],
+                    odds=pick["odds"],
+                    bankroll=bankroll,
+                    kelly_fraction=kelly_fraction,
+                    min_stake=kelly_min_stake,
+                    max_stake_pct=kelly_max_stake_pct,
+                ),
                 "true_label": true_label,
                 "hit": (pick["label"] == true_label) if true_label >= 0 else None,
             })
@@ -389,6 +419,17 @@ def run_issue_predict(
             by_league[lg] += 1
         all_picks = capped
 
+    # Daily exposure guard: cap total stake as a fraction of bankroll.
+    if max_total_stake_pct > 0 and bankroll > 0 and all_picks:
+        total_stake = sum(float(p.get("stake_yuan", STAKE_PER_BET)) for p in all_picks)
+        max_total_stake = bankroll * max_total_stake_pct
+        if total_stake > max_total_stake > 0:
+            scale = max_total_stake / total_stake
+            for p in all_picks:
+                old_stake = float(p.get("stake_yuan", STAKE_PER_BET))
+                new_stake = max(kelly_min_stake, round(old_stake * scale, 2))
+                p["stake_yuan"] = new_stake
+
     return all_picks
 
 
@@ -408,7 +449,7 @@ def format_pick_table(picks, show_result=True):
     lines = []
     header = (
         f"  {'#':<3} {'Match':<32} {'Lg':<5} {'Task':<3} "
-        f"{'Pick':<5} {'HC':>5} {'Odds':>5} {'EV':>6} {'Conf':>5}"
+        f"{'Pick':<5} {'HC':>5} {'Odds':>5} {'EV':>6} {'Conf':>5} {'Stake':>6}"
     )
     if show_result:
         header += f"  {'Result':<6}"
@@ -429,7 +470,7 @@ def format_pick_table(picks, show_result=True):
         row = (
             f"  {i:<3} {matchup:<32} {p['league']:<5} {_TASK_ABBREV.get(p['task'], '??'):<3} "
             f"{_PICK_ABBREV.get(p['pick_name'], p['pick_name']):<5} {hc:>5} "
-            f"{p['odds']:>5.2f} {p['ev']:>+6.3f} {p['confidence']:>5.3f}"
+            f"{p['odds']:>5.2f} {p['ev']:>+6.3f} {p['confidence']:>5.3f} {p.get('stake_yuan', STAKE_PER_BET):>6.2f}"
         )
         row += hit_str
         lines.append(row)
@@ -439,11 +480,12 @@ def format_pick_table(picks, show_result=True):
 
 def print_summary(picks, pred_date_str, ev_threshold, min_confidence):
     """Print a formatted pick slip to stdout."""
+    total_stake = sum(float(p.get("stake_yuan", STAKE_PER_BET)) for p in picks)
     print()
     print("=" * 72)
     print(f"  FOOTBALL LOTTERY PICK SLIP — {pred_date_str}")
     print(f"  EV threshold: {ev_threshold:+.2f}  |  Min confidence: {min_confidence:.2f}")
-    print(f"  Total picks: {len(picks)}  |  Total stake: ¥{len(picks) * STAKE_PER_BET:.0f}")
+    print(f"  Total picks: {len(picks)}  |  Total stake: ¥{total_stake:.2f}")
     print("=" * 72)
 
     # Split by task
@@ -455,7 +497,12 @@ def print_summary(picks, pred_date_str, ev_threshold, min_confidence):
         result_str = ""
         if known:
             wins = sum(1 for p in known if p["hit"])
-            profit = sum((p["odds"] - 1) * STAKE_PER_BET if p["hit"] else -STAKE_PER_BET for p in known)
+            profit = sum(
+                (p["odds"] - 1) * float(p.get("stake_yuan", STAKE_PER_BET))
+                if p["hit"]
+                else -float(p.get("stake_yuan", STAKE_PER_BET))
+                for p in known
+            )
             result_str = f"  [{wins}/{len(known)} wins, profit ¥{profit:+.2f}]"
         print(f"\n  HANDICAP 1X2 ({len(hc_picks)} picks){result_str}")
         show = any(p.get("hit") is not None for p in hc_picks)
@@ -466,7 +513,12 @@ def print_summary(picks, pred_date_str, ev_threshold, min_confidence):
         result_str = ""
         if known:
             wins = sum(1 for p in known if p["hit"])
-            profit = sum((p["odds"] - 1) * STAKE_PER_BET if p["hit"] else -STAKE_PER_BET for p in known)
+            profit = sum(
+                (p["odds"] - 1) * float(p.get("stake_yuan", STAKE_PER_BET))
+                if p["hit"]
+                else -float(p.get("stake_yuan", STAKE_PER_BET))
+                for p in known
+            )
             result_str = f"  [{wins}/{len(known)} wins, profit ¥{profit:+.2f}]"
         print(f"\n  FULLTIME 1X2 ({len(ft_picks)} picks){result_str}")
         show = any(p.get("hit") is not None for p in ft_picks)
@@ -504,6 +556,16 @@ def main():
         type=float,
         default=1.04,
         help="Probability temperature scaling (1.0 = no scaling)",
+    )
+    parser.add_argument("--bankroll", type=float, default=10000.0, help="Bankroll used for Kelly stake suggestions")
+    parser.add_argument("--kelly-fraction", type=float, default=0.5, help="Fractional Kelly multiplier (0 disables Kelly)")
+    parser.add_argument("--kelly-min-stake", type=float, default=2.0, help="Minimum stake per pick")
+    parser.add_argument("--kelly-max-stake-pct", type=float, default=0.03, help="Maximum stake as fraction of bankroll")
+    parser.add_argument(
+        "--max-total-stake-pct",
+        type=float,
+        default=0.12,
+        help="Maximum total daily stake as fraction of bankroll",
     )
     parser.add_argument(
         "--max-picks",
@@ -543,6 +605,11 @@ def main():
         max_picks=args.max_picks,
         max_picks_per_league=args.max_picks_per_league,
         temperature=args.temperature,
+        bankroll=args.bankroll,
+        kelly_fraction=args.kelly_fraction,
+        kelly_min_stake=args.kelly_min_stake,
+        kelly_max_stake_pct=args.kelly_max_stake_pct,
+        max_total_stake_pct=args.max_total_stake_pct,
     )
 
     # Optionally truncate for display
@@ -559,6 +626,7 @@ def main():
     output_dir = os.path.dirname(output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
+    total_stake = sum(float(p.get("stake_yuan", STAKE_PER_BET)) for p in picks)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(
             {
@@ -566,10 +634,15 @@ def main():
                 "ev_threshold": args.ev_threshold,
                 "min_confidence": args.min_confidence,
                 "temperature": args.temperature,
+                "bankroll": args.bankroll,
+                "kelly_fraction": args.kelly_fraction,
+                "kelly_min_stake": args.kelly_min_stake,
+                "kelly_max_stake_pct": args.kelly_max_stake_pct,
+                "max_total_stake_pct": args.max_total_stake_pct,
                 "max_picks": args.max_picks,
                 "max_picks_per_league": args.max_picks_per_league,
                 "total_picks": len(picks),
-                "total_stake_yuan": len(picks) * STAKE_PER_BET,
+                "total_stake_yuan": round(total_stake, 2),
                 "picks": picks,
             },
             f,
