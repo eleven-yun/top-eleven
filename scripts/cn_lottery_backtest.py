@@ -106,6 +106,10 @@ def simulate(
     ev_threshold: float,
     min_confidence: float,
     stake: float = 2.0,
+    kelly_fraction: float = 0.0,
+    bankroll: float = 10000.0,
+    kelly_min_stake: float = 2.0,
+    kelly_max_stake_pct: float = 0.05,
 ) -> dict:
     """Run the simulation and return stats for EU, CN SP, CN+EU fallback, and pre-match odds."""
     play_type = TASK_PLAY_TYPE[task]
@@ -119,6 +123,11 @@ def simulate(
     cn_covered = 0  # bets where a CN market row matched by match_id
     prematch_bets = prematch_profit = 0.0
     prematch_covered = 0  # bets where pre-match closing odds were available
+
+    # Kelly sizing (pre-match strategy only)
+    kelly_bankroll = bankroll
+    kelly_peak = bankroll
+    kelly_max_drawdown_pct = 0.0
 
     for pred in predictions:
         match_id = pred.get("match_id")
@@ -217,6 +226,32 @@ def simulate(
             else:
                 prematch_profit -= stake
 
+        # ---- Optional Kelly bankroll simulation (pre-match line when available) ----
+        if kelly_fraction > 0 and kelly_bankroll > 0:
+            kelly_odds = prematch_odds if prematch_odds is not None else eu_odds_bet
+            b = kelly_odds - 1.0
+            p = best_prob
+            if b > 0:
+                kelly_full = (p * kelly_odds - 1.0) / b
+                kelly_full = max(0.0, min(1.0, kelly_full))
+                kelly_f = kelly_fraction * kelly_full
+                stake_kelly = max(kelly_min_stake, kelly_bankroll * kelly_f)
+                if kelly_max_stake_pct > 0:
+                    stake_kelly = min(stake_kelly, kelly_bankroll * kelly_max_stake_pct)
+                stake_kelly = min(stake_kelly, kelly_bankroll)
+
+                if actual_outcome == best_outcome:
+                    kelly_bankroll += stake_kelly * b
+                else:
+                    kelly_bankroll -= stake_kelly
+
+                if kelly_bankroll > kelly_peak:
+                    kelly_peak = kelly_bankroll
+                if kelly_peak > 0:
+                    dd_pct = (kelly_peak - kelly_bankroll) / kelly_peak * 100.0
+                    if dd_pct > kelly_max_drawdown_pct:
+                        kelly_max_drawdown_pct = dd_pct
+
     eu_staked = eu_bets * stake
     cn_staked = cn_bets * stake
     cn_fallback_staked = cn_fallback_bets * stake
@@ -259,6 +294,14 @@ def simulate(
         "prematch_profit": round(prematch_profit, 2),
         "prematch_staked": round(prematch_staked, 2),
         "prematch_roi_pct": round(prematch_profit / prematch_staked * 100, 2) if prematch_staked > 0 else 0,
+        "kelly_enabled": kelly_fraction > 0,
+        "kelly_fraction": kelly_fraction,
+        "kelly_max_stake_pct": kelly_max_stake_pct,
+        "kelly_initial_bankroll": round(bankroll, 2),
+        "kelly_final_bankroll": round(kelly_bankroll, 2),
+        "kelly_profit": round(kelly_bankroll - bankroll, 2),
+        "kelly_roi_pct": round((kelly_bankroll - bankroll) / bankroll * 100, 2) if bankroll > 0 else 0,
+        "kelly_max_drawdown_pct": round(kelly_max_drawdown_pct, 2),
         "ev_threshold": ev_threshold,
         "min_confidence": min_confidence,
         "stake_per_bet": stake,
@@ -291,6 +334,15 @@ def main():
     parser.add_argument("--ev-threshold", type=float, default=0.05)
     parser.add_argument("--min-confidence", type=float, default=0.55)
     parser.add_argument("--stake", type=float, default=2.0)
+    parser.add_argument("--kelly-fraction", type=float, default=0.0, help="0 disables Kelly sizing")
+    parser.add_argument("--bankroll", type=float, default=10000.0, help="Initial bankroll for Kelly simulation")
+    parser.add_argument("--kelly-min-stake", type=float, default=2.0, help="Minimum Kelly stake per bet")
+    parser.add_argument(
+        "--kelly-max-stake-pct",
+        type=float,
+        default=0.05,
+        help="Cap Kelly stake as fraction of bankroll per bet (e.g., 0.05 = 5%)",
+    )
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
 
@@ -338,6 +390,10 @@ def main():
         ev_threshold=args.ev_threshold,
         min_confidence=args.min_confidence,
         stake=args.stake,
+        kelly_fraction=args.kelly_fraction,
+        bankroll=args.bankroll,
+        kelly_min_stake=args.kelly_min_stake,
+        kelly_max_stake_pct=args.kelly_max_stake_pct,
     )
 
     print("\n" + "=" * 60)
@@ -365,6 +421,14 @@ def main():
         f"{'ROI':<30} {str(results['eu_roi_pct'])+'%':>12} {str(results['cn_roi_pct'])+'%':>12} "
         f"{str(results['cn_fallback_roi_pct'])+'%':>16} {str(results['prematch_roi_pct'])+'%':>12}"
     )
+    if results.get("kelly_enabled"):
+        print("-" * 60)
+        print(
+            f"Kelly ({results['kelly_fraction']:.2f}x): bankroll ¥{results['kelly_initial_bankroll']} "
+            f"-> ¥{results['kelly_final_bankroll']} | ROI {results['kelly_roi_pct']}% | "
+            f"Cap {results['kelly_max_stake_pct']*100:.1f}% | "
+            f"MaxDD {results['kelly_max_drawdown_pct']}%"
+        )
     print("=" * 60)
 
     if args.output:
