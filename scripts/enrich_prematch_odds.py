@@ -23,8 +23,15 @@ Usage:
 import argparse
 import json
 import os
+from collections import Counter
 
-from enrich_lottery_odds import build_alias_index, load_json_or_jsonl, match_odds_to_meta, write_json
+from enrich_lottery_odds import (
+    LEAGUE_ALIAS_CN,
+    build_alias_index,
+    load_json_or_jsonl,
+    match_odds_to_meta,
+    write_json,
+)
 
 
 def write_jsonl(path, records):
@@ -115,14 +122,58 @@ def build_enriched_records(raw_rows, matched_rows, opening_index):
     return enriched
 
 
-def build_report(raw_rows, matched_rows, unresolved_rows):
+def build_scope_index(meta_rows):
+    leagues = set()
+    countries = set()
+    league_codes = set()
+    for row in meta_rows:
+        league = (row.get("league") or "").strip().lower()
+        country = (row.get("country_name") or "").strip().lower()
+        league_code = (row.get("league_code") or "").strip().lower()
+        if league:
+            leagues.add(league)
+        if country:
+            countries.add(country)
+        if league_code:
+            league_codes.add(league_code)
+    return {
+        "leagues": leagues,
+        "countries": countries,
+        "league_codes": league_codes,
+    }
+
+
+def is_scope_eligible(row, scope_index):
+    league_raw = (row.get("league_name_raw") or "").strip().lower()
+    if not league_raw:
+        return False
+    league_resolved = LEAGUE_ALIAS_CN.get(league_raw, league_raw)
+    for candidate in scope_index["leagues"]:
+        if league_resolved in candidate or candidate in league_resolved:
+            return True
+    return league_resolved in scope_index["countries"] or league_resolved in scope_index["league_codes"]
+
+
+def build_report(raw_rows, matched_rows, unresolved_rows, meta_rows):
+    scope_index = build_scope_index(meta_rows)
+    eligible_rows = [row for row in raw_rows if is_scope_eligible(row, scope_index)]
+    out_of_scope_counter = Counter(
+        row.get("league_name_raw") or "unknown"
+        for row in raw_rows
+        if not is_scope_eligible(row, scope_index)
+    )
     report = {
         "total_odds_rows": len(raw_rows),
+        "eligible_odds_rows": len(eligible_rows),
+        "out_of_scope_rows": len(raw_rows) - len(eligible_rows),
         "matched": len(matched_rows),
+        "eligible_match_rate": round(len(matched_rows) / max(1, len(eligible_rows)), 4),
+        "overall_match_rate": round(len(matched_rows) / max(1, len(raw_rows)), 4),
         "skipped_low_score": sum(1 for row in unresolved_rows if str(row.get("reason", "")).startswith("low_")),
         "skipped_no_candidate": sum(
             1 for row in unresolved_rows if row.get("reason") in {"no_candidates", "no_scored_candidates"}
         ),
+        "top_out_of_scope_leagues": dict(out_of_scope_counter.most_common(10)),
         "by_play_type": {},
     }
     for row in raw_rows:
@@ -210,13 +261,20 @@ def main():
         min_gap=0.10,
     )
     matched = build_enriched_records(odds_rows, matched_rows, opening_index)
-    report = build_report(odds_rows, matched, unresolved_rows)
+    report = build_report(odds_rows, matched, unresolved_rows, meta_rows)
 
     print(f"\nReport:")
     print(f"  Total odds rows: {report['total_odds_rows']}")
-    print(f"  Matched: {report['matched']} ({100*report['matched']/max(1, report['total_odds_rows']):.1f}%)")
+    print(f"  In-scope rows: {report['eligible_odds_rows']}")
+    print(f"  Out-of-scope rows: {report['out_of_scope_rows']}")
+    print(f"  Matched: {report['matched']} ({100*report['overall_match_rate']:.1f}% of total)")
+    print(f"  Eligible coverage: {100*report['eligible_match_rate']:.1f}%")
     print(f"  Skipped (low score): {report['skipped_low_score']}")
     print(f"  Skipped (no candidate): {report['skipped_no_candidate']}")
+    if report["top_out_of_scope_leagues"]:
+        print(f"\nTop out-of-scope leagues:")
+        for league, count in report["top_out_of_scope_leagues"].items():
+            print(f"  {league}: {count}")
     print(f"\nBy play type:")
     for pt, stats in report["by_play_type"].items():
         pct = 100 * stats["matched"] / max(1, stats["total"])

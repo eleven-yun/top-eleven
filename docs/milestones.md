@@ -368,6 +368,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
   - Target: `https://odds.500.com/fenxi/` or equivalent endpoint
   - Allows true EV calculation with CN odds instead of EU proxy
 - [x] Implement pre-match enrichment pipeline (`enrich_prematch_odds.py`) to map pre-match CN odds to `match_id`
+- [x] Add scope-aware coverage reporting in `enrich_prematch_odds.py` to separate in-dataset rows from out-of-scope competitions
 - [x] Re-run backtest with pre-match CN odds
   - 2025/26 test split (EV≥0.05, conf≥0.55):
     - EU ROI: +1.67%
