@@ -115,11 +115,22 @@ def parse_page(html: str, date_str: str) -> list[dict]:
         away_team = m.group(6).strip()
         # score is group 7, we don't need it
 
-        # Convert kickoff local China time (UTC+8) to UTC for matching
-        year = date_str[:4]
+        # Convert kickoff local China time (UTC+8) to UTC for matching.
+        # Around New Year, kaijiang page date and row MM-DD can cross year boundary,
+        # so choose the closest year candidate to the page date.
+        page_dt = datetime.strptime(date_str, "%Y-%m-%d")
+        year = page_dt.year
         kickoff_cn_str = f"{year}-{kickoff_raw}"  # "YYYY-MM-DD HH:MM" (UTC+8)
         try:
             kickoff_cn_dt = datetime.strptime(kickoff_cn_str, "%Y-%m-%d %H:%M")
+            delta_days = abs((kickoff_cn_dt.date() - page_dt.date()).days)
+            if delta_days > 180:
+                prev_year = kickoff_cn_dt.replace(year=kickoff_cn_dt.year - 1)
+                next_year = kickoff_cn_dt.replace(year=kickoff_cn_dt.year + 1)
+                kickoff_cn_dt = min(
+                    (kickoff_cn_dt, prev_year, next_year),
+                    key=lambda x: abs((x.date() - page_dt.date()).days),
+                )
             kickoff_utc_dt = kickoff_cn_dt - timedelta(hours=8)
             kickoff_local = kickoff_utc_dt.strftime("%Y-%m-%d %H:%M")
         except ValueError:

@@ -179,6 +179,7 @@ def main():
 
     # --- LightGBM ---
     X_train, y_train, _ = build_lgbm_xy(split_samples["train"], prematch_by_id, meta_by_id, market_by_id, args.task)
+    X_val, y_val, _ = build_lgbm_xy(split_samples["validation"], prematch_by_id, meta_by_id, market_by_id, args.task)
     X_eval, y_eval, eval_ids = build_lgbm_xy(split_samples[args.split], prematch_by_id, meta_by_id, market_by_id, args.task)
 
     lgbm_model = lgb.LGBMClassifier(
@@ -195,7 +196,7 @@ def main():
     )
     lgbm_model.fit(
         X_train, y_train,
-        eval_set=[(X_eval, y_eval)],
+        eval_set=[(X_val, y_val)],
         callbacks=[lgb.early_stopping(50, verbose=False), lgb.log_evaluation(period=9999)],
     )
     lgbm_probs = lgbm_model.predict_proba(X_eval)
