@@ -463,11 +463,11 @@ def main():
     )
     parser.add_argument(
         "--tasks",
-        default="handicap_label,fulltime_label",
-        help="Comma-separated task list (default: handicap_label,fulltime_label)",
+        default="handicap_label",
+        help="Comma-separated task list (default: handicap_label)",
     )
-    parser.add_argument("--ev-threshold", type=float, default=0.05)
-    parser.add_argument("--min-confidence", type=float, default=0.55)
+    parser.add_argument("--ev-threshold", type=float, default=0.02)
+    parser.add_argument("--min-confidence", type=float, default=0.51)
     parser.add_argument(
         "--output",
         default=None,
