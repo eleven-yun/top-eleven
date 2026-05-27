@@ -322,7 +322,82 @@ def run_backtest(predictions, market_index, task, ev_threshold, min_confidence, 
     }
 
 
-def aggregate_results(raw, task, ev_threshold, min_confidence, max_one_bet_per_match):
+def simulate_kelly_bankroll(
+    bets,
+    initial_bankroll,
+    kelly_fraction,
+    kelly_min_stake,
+    kelly_max_stake_pct,
+):
+    """Run optional capped fractional-Kelly bankroll simulation over bet sequence."""
+    bankroll = float(initial_bankroll)
+    peak = bankroll
+    max_dd_pct = 0.0
+    curve = []
+
+    for b in bets:
+        odds = float(b["odds"])
+        prob = float(b["prob"])
+        won = bool(b["won"])
+
+        if bankroll <= 0:
+            curve.append(round(bankroll, 4))
+            continue
+
+        b_net = odds - 1.0
+        if b_net <= 0:
+            curve.append(round(bankroll, 4))
+            continue
+
+        kelly_full = (prob * odds - 1.0) / b_net
+        kelly_full = max(0.0, min(1.0, kelly_full))
+        kelly_f = max(0.0, float(kelly_fraction)) * kelly_full
+
+        stake = bankroll * kelly_f
+        stake = max(float(kelly_min_stake), stake)
+        if kelly_max_stake_pct > 0:
+            stake = min(stake, bankroll * float(kelly_max_stake_pct))
+        stake = min(stake, bankroll)
+
+        if won:
+            bankroll += stake * b_net
+        else:
+            bankroll -= stake
+
+        if bankroll > peak:
+            peak = bankroll
+        if peak > 0:
+            dd_pct = (peak - bankroll) / peak * 100.0
+            if dd_pct > max_dd_pct:
+                max_dd_pct = dd_pct
+
+        curve.append(round(bankroll, 4))
+
+    return {
+        "enabled": True,
+        "kelly_fraction": float(kelly_fraction),
+        "initial_bankroll": round(float(initial_bankroll), 4),
+        "final_bankroll": round(bankroll, 4),
+        "profit": round(bankroll - float(initial_bankroll), 4),
+        "roi_pct": round((bankroll - float(initial_bankroll)) / float(initial_bankroll) * 100, 4)
+        if float(initial_bankroll) > 0
+        else 0.0,
+        "max_drawdown_pct": round(max_dd_pct, 4),
+        "curve": curve,
+    }
+
+
+def aggregate_results(
+    raw,
+    task,
+    ev_threshold,
+    min_confidence,
+    max_one_bet_per_match,
+    kelly_fraction=0.0,
+    bankroll=10000.0,
+    kelly_min_stake=2.0,
+    kelly_max_stake_pct=0.05,
+):
     """Compute summary statistics from raw backtest bets.
 
     Parameters
@@ -340,6 +415,7 @@ def aggregate_results(raw, task, ev_threshold, min_confidence, max_one_bet_per_m
             "ev_threshold": ev_threshold,
             "min_confidence": min_confidence,
             "max_one_bet_per_match": max_one_bet_per_match,
+            "kelly_enabled": bool(kelly_fraction > 0),
             "total_bets": 0,
             "no_market_matches": raw["no_market_count"],
             "skipped_matches": raw["skipped_count"],
@@ -407,12 +483,27 @@ def aggregate_results(raw, task, ev_threshold, min_confidence, max_one_bet_per_m
         "max": round(max(evs), 6),
     }
 
-    return {
+    kelly_result = None
+    if kelly_fraction > 0:
+        kelly_result = simulate_kelly_bankroll(
+            bets=bets,
+            initial_bankroll=bankroll,
+            kelly_fraction=kelly_fraction,
+            kelly_min_stake=kelly_min_stake,
+            kelly_max_stake_pct=kelly_max_stake_pct,
+        )
+
+    report = {
         "task": task,
         "ev_threshold": ev_threshold,
         "min_confidence": min_confidence,
         "max_one_bet_per_match": max_one_bet_per_match,
         "stake_per_bet_yuan": STAKE_PER_BET,
+        "kelly_enabled": bool(kelly_fraction > 0),
+        "kelly_fraction": float(kelly_fraction),
+        "kelly_initial_bankroll": round(float(bankroll), 4),
+        "kelly_min_stake": float(kelly_min_stake),
+        "kelly_max_stake_pct": float(kelly_max_stake_pct),
         "total_bets": total_bets,
         "total_stake_yuan": total_stake,
         "total_profit_yuan": total_profit,
@@ -430,6 +521,11 @@ def aggregate_results(raw, task, ev_threshold, min_confidence, max_one_bet_per_m
         "class_breakdown": class_breakdown,
         "cumulative_profit_curve": cum,
     }
+
+    if kelly_result is not None:
+        report["kelly"] = kelly_result
+
+    return report
 
 
 # ---------------------------------------------------------------------------
@@ -473,6 +569,30 @@ def parse_args():
         action="store_true",
         default=False,
         help="Place at most one bet per match (highest EV outcome only).",
+    )
+    parser.add_argument(
+        "--kelly-fraction",
+        type=float,
+        default=0.0,
+        help="Fractional Kelly multiplier (0 disables Kelly simulation).",
+    )
+    parser.add_argument(
+        "--bankroll",
+        type=float,
+        default=10000.0,
+        help="Initial bankroll for Kelly simulation.",
+    )
+    parser.add_argument(
+        "--kelly-min-stake",
+        type=float,
+        default=2.0,
+        help="Minimum stake per Kelly bet.",
+    )
+    parser.add_argument(
+        "--kelly-max-stake-pct",
+        type=float,
+        default=0.05,
+        help="Maximum stake per Kelly bet as fraction of bankroll.",
     )
     parser.add_argument(
         "--output",
@@ -522,6 +642,10 @@ def main():
         ev_threshold=args.ev_threshold,
         min_confidence=args.min_confidence,
         max_one_bet_per_match=args.max_one_bet_per_match,
+        kelly_fraction=args.kelly_fraction,
+        bankroll=args.bankroll,
+        kelly_min_stake=args.kelly_min_stake,
+        kelly_max_stake_pct=args.kelly_max_stake_pct,
     )
 
     if not args.save_bets:
@@ -545,6 +669,14 @@ def main():
     ):
         if key in report:
             print(f"  {key}: {report[key]}")
+    if report.get("kelly"):
+        k = report["kelly"]
+        print("\n  Kelly bankroll simulation:")
+        print(f"    initial_bankroll: {k['initial_bankroll']}")
+        print(f"    final_bankroll:   {k['final_bankroll']}")
+        print(f"    profit:           {k['profit']}")
+        print(f"    roi_pct:          {k['roi_pct']}")
+        print(f"    max_drawdown_pct: {k['max_drawdown_pct']}")
     if "odds_bucket_breakdown" in report:
         print("\n  Odds bucket breakdown:")
         for bucket, stats in report["odds_bucket_breakdown"].items():

@@ -384,7 +384,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 ### 9C — Kelly Criterion Staking
 - [x] Implement fractional Kelly sizing in `cn_lottery_backtest.py` (`f = (p * odds - 1) / (odds - 1)`), with bankroll and max-stake cap
 - [x] Add `--kelly-fraction` flag to `cn_lottery_backtest.py` (with bankroll and max-stake cap)
-- [ ] Add `--kelly-fraction` flag to `backtest_ev.py`
+- [x] Add `--kelly-fraction` flag to `backtest_ev.py`
 - [x] Report Kelly-sized bankroll/ROI/max-drawdown alongside flat-stake backtest output (`cn_lottery_backtest.py`)
 
 ### 9E — Risk Controls and Robustness
