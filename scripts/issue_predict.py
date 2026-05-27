@@ -32,6 +32,7 @@ Output: JSON file + formatted CLI table with:
 
 import argparse
 import json
+import math
 import os
 import sys
 import warnings
@@ -107,6 +108,17 @@ def pick_from_probs(probs, odds_dict, ev_threshold, min_confidence):
                     "ev": round(float(ev), 4),
                 }
     return best
+
+
+def apply_temperature(probs, temperature):
+    """Apply temperature scaling to a probability vector."""
+    if temperature <= 0 or abs(temperature - 1.0) < 1e-9:
+        return probs
+    logs = [math.log(max(1e-12, float(p))) / temperature for p in probs]
+    m = max(logs)
+    exps = [math.exp(x - m) for x in logs]
+    z = sum(exps)
+    return [x / z for x in exps]
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +220,7 @@ def run_issue_predict(
     min_confidence,
     max_picks=0,
     max_picks_per_league=0,
+    temperature=1.0,
     root=ROOT,
     val_fraction=0.15,
 ):
@@ -314,6 +327,7 @@ def run_issue_predict(
         for mid, probs in zip(tgt_ids_valid, probs_matrix):
             meta = meta_by_id.get(mid, {})
             pf = prematch_by_id.get(mid, {})
+            probs = apply_temperature(probs, temperature)
 
             # Odds dict for this task
             odds_dict = {}
@@ -486,6 +500,12 @@ def main():
     parser.add_argument("--ev-threshold", type=float, default=0.02)
     parser.add_argument("--min-confidence", type=float, default=0.51)
     parser.add_argument(
+        "--temperature",
+        type=float,
+        default=1.04,
+        help="Probability temperature scaling (1.0 = no scaling)",
+    )
+    parser.add_argument(
         "--max-picks",
         type=int,
         default=0,
@@ -522,6 +542,7 @@ def main():
         min_confidence=args.min_confidence,
         max_picks=args.max_picks,
         max_picks_per_league=args.max_picks_per_league,
+        temperature=args.temperature,
     )
 
     # Optionally truncate for display
@@ -544,6 +565,7 @@ def main():
                 "prediction_date": args.date,
                 "ev_threshold": args.ev_threshold,
                 "min_confidence": args.min_confidence,
+                "temperature": args.temperature,
                 "max_picks": args.max_picks,
                 "max_picks_per_league": args.max_picks_per_league,
                 "total_picks": len(picks),

@@ -375,7 +375,8 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
     - Pre-match ROI: +9.71% (56.3% coverage)
 
 ### 9B — Probability Calibration
-- [ ] Implement temperature scaling (per-task) on validation set
+- [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split
+- [ ] Wire per-task calibrated temperatures into training/inference pipeline end-to-end
 - [ ] Implement isotonic regression calibration as alternative
 - [ ] Compare pre/post calibration: ECE, Brier score, log loss on test split
 - [ ] Validate calibration on promoted-team match slice specifically
