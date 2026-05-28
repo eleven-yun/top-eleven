@@ -95,7 +95,7 @@ def simulate(
     eu_bets = eu_profit = 0.0
     cn_bets = cn_profit = 0.0
     cn_fallback_bets = cn_fallback_profit = 0.0
-    cn_covered = 0  # bets where CN SP was available
+    cn_covered = 0  # bets where a CN market row matched by match_id
 
     for pred in predictions:
         match_id = pred.get("match_id")
@@ -148,22 +148,26 @@ def simulate(
 
         # ---- CN payout ----
         cn_row = cn_index.get(match_id)
-        cn_sp = None
-        if cn_row is not None:
-            cn_sp = get_odds_for_outcome(cn_row, best_outcome)
-
         cn_fallback_bets += 1
-        if cn_sp is not None:
+        if cn_row is not None:
             cn_covered += 1
             cn_bets += 1
+
+            # For matched CN rows, missing selected-outcome SP means selection lost
+            # (scraper stores settlement SP for realized outcome only).
             if actual_outcome == best_outcome:
-                cn_profit += cn_sp * stake - stake
-                cn_fallback_profit += cn_sp * stake - stake
+                cn_actual_sp = get_odds_for_outcome(cn_row, actual_outcome)
+                if cn_actual_sp is not None:
+                    cn_profit += cn_actual_sp * stake - stake
+                    cn_fallback_profit += cn_actual_sp * stake - stake
+                else:
+                    # Defensive guard for malformed CN rows on winning outcomes.
+                    cn_fallback_profit += eu_odds_bet * stake - stake
             else:
                 cn_profit -= stake
                 cn_fallback_profit -= stake
         else:
-            # Fall back to EU odds
+            # No matched CN row: mixed column falls back to EU odds.
             if actual_outcome == best_outcome:
                 cn_fallback_profit += eu_odds_bet * stake - stake
             else:
