@@ -122,14 +122,15 @@ def build_enriched_records(raw_rows, matched_rows, opening_index):
     return enriched
 
 
-def build_scope_index(meta_rows):
+def build_scope_index_from_data_config(data_config):
     leagues = set()
     countries = set()
     league_codes = set()
-    for row in meta_rows:
-        league = (row.get("league") or "").strip().lower()
-        country = (row.get("country_name") or "").strip().lower()
-        league_code = (row.get("league_code") or "").strip().lower()
+    competitions = data_config.get("requested_competitions", [])
+    for comp in competitions:
+        league = (comp.get("competition_name") or "").strip().lower()
+        country = (comp.get("country_name") or "").strip().lower()
+        league_code = (comp.get("league_code") or "").strip().lower()
         if league:
             leagues.add(league)
         if country:
@@ -243,8 +244,7 @@ def is_scope_eligible(row, scope_index):
     return league_resolved in scope_index["countries"] or league_resolved in scope_index["league_codes"]
 
 
-def build_report(raw_rows, matched_rows, unresolved_rows, meta_rows):
-    scope_index = build_scope_index(meta_rows)
+def build_report(raw_rows, matched_rows, unresolved_rows, scope_index):
     eligible_rows = [row for row in raw_rows if is_scope_eligible(row, scope_index)]
     out_of_scope_counter = Counter(
         row.get("league_name_raw") or "unknown"
@@ -290,6 +290,11 @@ def main():
         "--meta-file",
         default="data/processed/match_meta.jsonl",
         help="Match metadata JSONL",
+    )
+    parser.add_argument(
+        "--data-config",
+        default="config/data_config.json",
+        help="Dataset scope config JSON (requested_competitions)",
     )
     parser.add_argument(
         "--alias-file",
@@ -348,6 +353,17 @@ def main():
         alias_config = json.load(f)
     alias_index = build_alias_index(alias_config)
 
+    print(f"Loading dataset scope config from {args.data_config}...")
+    with open(args.data_config, encoding="utf-8") as f:
+        data_config = json.load(f)
+    scope_index = build_scope_index_from_data_config(data_config)
+    print(
+        "  → "
+        f"{len(scope_index['leagues'])} leagues, "
+        f"{len(scope_index['countries'])} countries, "
+        f"{len(scope_index['league_codes'])} league codes"
+    )
+
     print(f"\nMatching odds to metadata (min_score={args.min_score})...")
     transformed_rows, opening_index = transform_prematch_rows(odds_rows)
     matched_rows, unresolved_rows = match_odds_to_meta(
@@ -358,8 +374,7 @@ def main():
         min_gap=0.10,
     )
     matched = build_enriched_records(odds_rows, matched_rows, opening_index)
-    scope_index = build_scope_index(meta_rows)
-    report = build_report(odds_rows, matched, unresolved_rows, meta_rows)
+    report = build_report(odds_rows, matched, unresolved_rows, scope_index)
     unresolved_alias_suggestions = build_unresolved_alias_suggestions(
         unresolved_rows,
         meta_rows,
