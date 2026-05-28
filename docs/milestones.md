@@ -374,6 +374,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
     - EU ROI: +1.67%
     - CN SP ROI: +3.96% (23.2% coverage)
     - Pre-match ROI: +9.71% (56.3% coverage)
+  - Prematch matcher status (current raw scrape): 43.8% overall match rate, 98.6% in-scope coverage after alias expansion
 
 ### 9B — Probability Calibration
 - [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split
