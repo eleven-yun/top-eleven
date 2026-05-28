@@ -211,6 +211,22 @@ def build_unresolved_alias_suggestions(unresolved_rows, meta_rows, scope_index, 
             rec["away_team_raw"] = away_raw
             rec["away_team_suggestions"] = suggest_canonical_teams(away_raw, canonical_counter, top_n=5)
 
+        actionable = False
+        non_actionable_reasons = []
+        if home_needed:
+            if rec.get("home_team_suggestions"):
+                actionable = True
+            else:
+                non_actionable_reasons.append("home_no_canonical_candidate")
+        if away_needed:
+            if rec.get("away_team_suggestions"):
+                actionable = True
+            else:
+                non_actionable_reasons.append("away_no_canonical_candidate")
+
+        rec["actionable"] = actionable
+        rec["non_actionable_reason"] = None if actionable else ",".join(non_actionable_reasons)
+
         suggestions.append(rec)
 
     return suggestions
@@ -249,6 +265,8 @@ def build_report(raw_rows, matched_rows, unresolved_rows, meta_rows):
         "top_out_of_scope_leagues": dict(out_of_scope_counter.most_common(10)),
         "by_play_type": {},
         "unresolved_alias_suggestion_sample": [],
+        "unresolved_alias_actionable": 0,
+        "unresolved_alias_non_actionable": 0,
     }
     for row in raw_rows:
         play_type = row.get("play_type")
@@ -349,6 +367,10 @@ def main():
         alias_index,
     )
     report["unresolved_alias_suggestion_sample"] = unresolved_alias_suggestions[:20]
+    report["unresolved_alias_actionable"] = sum(
+        1 for row in unresolved_alias_suggestions if row.get("actionable")
+    )
+    report["unresolved_alias_non_actionable"] = len(unresolved_alias_suggestions) - report["unresolved_alias_actionable"]
 
     print(f"\nReport:")
     print(f"  Total odds rows: {report['total_odds_rows']}")
@@ -359,6 +381,8 @@ def main():
     print(f"  Skipped (low score): {report['skipped_low_score']}")
     print(f"  Skipped (no candidate): {report['skipped_no_candidate']}")
     print(f"  Alias suggestion candidates: {len(unresolved_alias_suggestions)}")
+    print(f"    Actionable: {report['unresolved_alias_actionable']}")
+    print(f"    Non-actionable: {report['unresolved_alias_non_actionable']}")
     if report["top_out_of_scope_leagues"]:
         print(f"\nTop out-of-scope leagues:")
         for league, count in report["top_out_of_scope_leagues"].items():
