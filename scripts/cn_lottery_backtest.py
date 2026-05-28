@@ -7,9 +7,9 @@ Pipeline:
 2. Load existing European odds (lottery_market.jsonl) — used for EV filtering
 3. Load China Lottery SP data (from fetch_cn_odds.py + enrich_lottery_odds.py)
 4. For each bet placed (based on European odds EV filter):
-   a. If we have a matching China Lottery SP for the bet outcome → use lottery payout
-   b. Otherwise → fall back to European odds payout
-5. Report ROI and coverage for both columns
+    a. If we have a matching China Lottery SP for the bet outcome → use lottery payout
+    b. Otherwise → track only in a separate "CN+EU fallback" column
+5. Report both pure CN-covered ROI and mixed fallback ROI with coverage
 
 Usage:
     python scripts/cn_lottery_backtest.py \\
@@ -94,6 +94,7 @@ def simulate(
 
     eu_bets = eu_profit = 0.0
     cn_bets = cn_profit = 0.0
+    cn_fallback_bets = cn_fallback_profit = 0.0
     cn_covered = 0  # bets where CN SP was available
 
     for pred in predictions:
@@ -151,22 +152,26 @@ def simulate(
         if cn_row is not None:
             cn_sp = get_odds_for_outcome(cn_row, best_outcome)
 
-        cn_bets += 1
+        cn_fallback_bets += 1
         if cn_sp is not None:
             cn_covered += 1
+            cn_bets += 1
             if actual_outcome == best_outcome:
                 cn_profit += cn_sp * stake - stake
+                cn_fallback_profit += cn_sp * stake - stake
             else:
                 cn_profit -= stake
+                cn_fallback_profit -= stake
         else:
             # Fall back to EU odds
             if actual_outcome == best_outcome:
-                cn_profit += eu_odds_bet * stake - stake
+                cn_fallback_profit += eu_odds_bet * stake - stake
             else:
-                cn_profit -= stake
+                cn_fallback_profit -= stake
 
     eu_staked = eu_bets * stake
     cn_staked = cn_bets * stake
+    cn_fallback_staked = cn_fallback_bets * stake
 
     return {
         "total_predictions": n_total,
@@ -177,10 +182,16 @@ def simulate(
         "eu_roi_pct": round(eu_profit / eu_staked * 100, 2) if eu_staked > 0 else 0,
         "cn_bets": int(cn_bets),
         "cn_covered": cn_covered,
-        "cn_coverage_pct": round(cn_covered / cn_bets * 100, 1) if cn_bets > 0 else 0,
+        "cn_coverage_pct": round(cn_covered / cn_fallback_bets * 100, 1) if cn_fallback_bets > 0 else 0,
         "cn_profit": round(cn_profit, 2),
         "cn_staked": round(cn_staked, 2),
         "cn_roi_pct": round(cn_profit / cn_staked * 100, 2) if cn_staked > 0 else 0,
+        "cn_fallback_bets": int(cn_fallback_bets),
+        "cn_fallback_profit": round(cn_fallback_profit, 2),
+        "cn_fallback_staked": round(cn_fallback_staked, 2),
+        "cn_fallback_roi_pct": round(cn_fallback_profit / cn_fallback_staked * 100, 2)
+        if cn_fallback_staked > 0
+        else 0,
         "ev_threshold": ev_threshold,
         "min_confidence": min_confidence,
         "stake_per_bet": stake,
@@ -249,13 +260,25 @@ def main():
     print("\n" + "=" * 60)
     print(f"Task: {args.task}  |  EV≥{args.ev_threshold}  conf≥{args.min_confidence}")
     print("=" * 60)
-    print(f"{'Metric':<30} {'EU Odds':>12} {'CN Lottery':>12}")
+    print(f"{'Metric':<30} {'EU Odds':>12} {'CN Lottery':>12} {'CN+EU fallback':>16}")
     print("-" * 60)
-    print(f"{'Bets placed':<30} {results['eu_bets']:>12} {results['cn_bets']:>12}")
-    print(f"{'CN SP coverage':<30} {'':>12} {results['cn_coverage_pct']:>11.1f}%")
-    print(f"{'Staked':<30} {'¥'+str(results['eu_staked']):>12} {'¥'+str(results['cn_staked']):>12}")
-    print(f"{'Profit':<30} {'¥'+str(results['eu_profit']):>12} {'¥'+str(results['cn_profit']):>12}")
-    print(f"{'ROI':<30} {str(results['eu_roi_pct'])+'%':>12} {str(results['cn_roi_pct'])+'%':>12}")
+    print(
+        f"{'Bets placed':<30} {results['eu_bets']:>12} {results['cn_bets']:>12} "
+        f"{results['cn_fallback_bets']:>16}"
+    )
+    print(f"{'CN SP coverage':<30} {'':>12} {results['cn_coverage_pct']:>11.1f}% {'':>16}")
+    print(
+        f"{'Staked':<30} {'¥'+str(results['eu_staked']):>12} {'¥'+str(results['cn_staked']):>12} "
+        f"{'¥'+str(results['cn_fallback_staked']):>16}"
+    )
+    print(
+        f"{'Profit':<30} {'¥'+str(results['eu_profit']):>12} {'¥'+str(results['cn_profit']):>12} "
+        f"{'¥'+str(results['cn_fallback_profit']):>16}"
+    )
+    print(
+        f"{'ROI':<30} {str(results['eu_roi_pct'])+'%':>12} {str(results['cn_roi_pct'])+'%':>12} "
+        f"{str(results['cn_fallback_roi_pct'])+'%':>16}"
+    )
     print("=" * 60)
 
     if args.output:
