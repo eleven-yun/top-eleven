@@ -143,6 +143,79 @@ def build_scope_index(meta_rows):
     }
 
 
+def build_team_name_counter(meta_rows):
+    counter = Counter()
+    for row in meta_rows:
+        home_name = (row.get("home_team_name") or "").strip()
+        away_name = (row.get("away_team_name") or "").strip()
+        if home_name:
+            counter[home_name] += 1
+        if away_name:
+            counter[away_name] += 1
+    return counter
+
+
+def suggest_canonical_teams(raw_team_name, canonical_counter, top_n=5):
+    from enrich_lottery_odds import team_match_score
+
+    scored = []
+    for name, freq in canonical_counter.items():
+        score = team_match_score(raw_team_name, name)
+        if score > 0:
+            scored.append((score, freq, name))
+    scored.sort(key=lambda x: (-x[0], -x[1], x[2]))
+    return [
+        {"canonical_team": name, "score": score, "frequency": freq}
+        for score, freq, name in scored[:top_n]
+    ]
+
+
+def build_unresolved_alias_suggestions(unresolved_rows, meta_rows, scope_index, alias_index):
+    canonical_counter = build_team_name_counter(meta_rows)
+    suggestions = []
+    seen = set()
+    for row in unresolved_rows:
+        if not is_scope_eligible(row, scope_index):
+            continue
+        home_raw = (row.get("home_team_raw") or "").strip()
+        away_raw = (row.get("away_team_raw") or "").strip()
+
+        home_needed = bool(home_raw) and home_raw.lower() not in alias_index
+        away_needed = bool(away_raw) and away_raw.lower() not in alias_index
+        if not home_needed and not away_needed:
+            continue
+
+        dedup_key = (
+            row.get("source_match_id"),
+            row.get("kickoff_local"),
+            row.get("league_name_raw"),
+            home_raw if home_needed else "",
+            away_raw if away_needed else "",
+        )
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
+
+        rec = {
+            "source_match_id": row.get("source_match_id"),
+            "kickoff_local": row.get("kickoff_local"),
+            "league_name_raw": row.get("league_name_raw"),
+            "reason": row.get("reason"),
+            "top_score": row.get("top_score"),
+        }
+
+        if home_needed:
+            rec["home_team_raw"] = home_raw
+            rec["home_team_suggestions"] = suggest_canonical_teams(home_raw, canonical_counter, top_n=5)
+        if away_needed:
+            rec["away_team_raw"] = away_raw
+            rec["away_team_suggestions"] = suggest_canonical_teams(away_raw, canonical_counter, top_n=5)
+
+        suggestions.append(rec)
+
+    return suggestions
+
+
 def is_scope_eligible(row, scope_index):
     league_raw = (row.get("league_name_raw") or "").strip().lower()
     if not league_raw:
@@ -175,6 +248,7 @@ def build_report(raw_rows, matched_rows, unresolved_rows, meta_rows):
         ),
         "top_out_of_scope_leagues": dict(out_of_scope_counter.most_common(10)),
         "by_play_type": {},
+        "unresolved_alias_suggestion_sample": [],
     }
     for row in raw_rows:
         play_type = row.get("play_type")
@@ -220,6 +294,11 @@ def main():
         help="Match coverage report JSON",
     )
     parser.add_argument(
+        "--suggestions-output",
+        default="data/processed/prematch_unresolved_alias_suggestions.json",
+        help="Output JSON for unresolved in-scope alias suggestions",
+    )
+    parser.add_argument(
         "--min-score",
         type=float,
         default=0.50,
@@ -261,7 +340,15 @@ def main():
         min_gap=0.10,
     )
     matched = build_enriched_records(odds_rows, matched_rows, opening_index)
+    scope_index = build_scope_index(meta_rows)
     report = build_report(odds_rows, matched, unresolved_rows, meta_rows)
+    unresolved_alias_suggestions = build_unresolved_alias_suggestions(
+        unresolved_rows,
+        meta_rows,
+        scope_index,
+        alias_index,
+    )
+    report["unresolved_alias_suggestion_sample"] = unresolved_alias_suggestions[:20]
 
     print(f"\nReport:")
     print(f"  Total odds rows: {report['total_odds_rows']}")
@@ -271,6 +358,7 @@ def main():
     print(f"  Eligible coverage: {100*report['eligible_match_rate']:.1f}%")
     print(f"  Skipped (low score): {report['skipped_low_score']}")
     print(f"  Skipped (no candidate): {report['skipped_no_candidate']}")
+    print(f"  Alias suggestion candidates: {len(unresolved_alias_suggestions)}")
     if report["top_out_of_scope_leagues"]:
         print(f"\nTop out-of-scope leagues:")
         for league, count in report["top_out_of_scope_leagues"].items():
@@ -286,6 +374,9 @@ def main():
 
         write_json(args.report, report)
         print(f"Wrote report to {args.report}")
+
+        write_json(args.suggestions_output, unresolved_alias_suggestions)
+        print(f"Wrote unresolved alias suggestions to {args.suggestions_output}")
 
 
 if __name__ == "__main__":
