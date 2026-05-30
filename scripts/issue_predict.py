@@ -36,7 +36,7 @@ import os
 import sys
 import warnings
 from collections import defaultdict
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import numpy as np
 
@@ -439,7 +439,8 @@ def print_summary(picks, pred_date_str, ev_threshold, min_confidence):
 # ---------------------------------------------------------------------------
 
 def main():
-    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    china_tz = timezone(timedelta(hours=8))
+    today_str = datetime.now(china_tz).strftime("%Y-%m-%d")
 
     parser = argparse.ArgumentParser(
         description="Issue-based pre-match pick generation for football lottery."
@@ -447,7 +448,7 @@ def main():
     parser.add_argument(
         "--date",
         default=today_str,
-        help="Target date YYYY-MM-DD (default: today UTC). "
+        help="Target date YYYY-MM-DD (default: today China time, UTC+8). "
              "Trains on all data strictly before this date.",
     )
     parser.add_argument(

@@ -347,9 +347,9 @@ python scripts/issue_predict.py --date 2025-03-15 \
 | Odds source | Bets | Stake (¥) | Profit (¥) | ROI | CN coverage |
 |-------------|------|-----------|-----------|-----|-------------|
 | EU proxy | 1216 | 2432 | +105.18 | **+4.32%** | — |
-| CN Lottery SP | 1216 | 2432 | +174.78 | **+7.19%** | 20.1% |
+| CN+EU fallback settlement | 1216 | 2432 | +174.78 | **+7.19%** | 20.1% |
 
-Best threshold (EV≥0.08): EU +4.64% / CN +7.60% ROI on 984 bets.
+Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 
 *CN coverage is 20% because only the winning outcome's SP is published post-match.*
 *The positive edge against real parimutuel odds confirms the model's discriminative value.*

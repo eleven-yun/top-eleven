@@ -110,9 +110,9 @@ For all three play types, the fulltime component follows the same definition:
 | Odds source | Bets | ROI | Hit-rate |
 |-------------|------|-----|----------|
 | EU bookmaker proxy (football-data.co.uk) | 1216 | +4.32% | 55.5% |
-| CN Lottery SP (500.com, 20% coverage) | 1216 | +7.19% | 55.5% |
+| CN+EU fallback settlement (500.com, 20% CN coverage) | 1216 | +7.19% | 55.5% |
 
-Best EV threshold (≥0.08): EU +4.64% / CN +7.60% on 984 bets.
+Best EV threshold (≥0.08): EU +4.64% / CN+EU fallback +7.60% on 984 bets.
 
 Transformer (match-token embedding) remains a research path — LightGBM dominates
 for all three tasks (ensemble with transformer adds no lift).
