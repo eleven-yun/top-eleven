@@ -290,7 +290,7 @@ consider market-odds-as-features as primary signal or reassess dataset coverage.
 *Goal: produce actionable pre-match outputs for each lottery issue.*
 
 - [x] Implement pre-match inference command (issue-based batch) — `scripts/issue_predict.py`
-- [x] Output predictions by issue with all three play types (handicap + fulltime)
+- [x] Output predictions by issue with supported play types (handicap + fulltime)
 - [x] Add output schema checks and sanity guards (train/target date partitioning)
 - [x] Add simple CLI summary (top confident picks per play type with EV/odds/hit display)
 - [x] Document usage in `README.md`

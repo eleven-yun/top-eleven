@@ -150,20 +150,21 @@ def simulate(
         cn_row = cn_index.get(match_id)
         cn_fallback_bets += 1
         if cn_row is not None:
-            cn_covered += 1
-            cn_bets += 1
-
             # For matched CN rows, missing selected-outcome SP means selection lost
             # (scraper stores settlement SP for realized outcome only).
             if actual_outcome == best_outcome:
                 cn_actual_sp = get_odds_for_outcome(cn_row, actual_outcome)
                 if cn_actual_sp is not None:
+                    cn_covered += 1
+                    cn_bets += 1
                     cn_profit += cn_actual_sp * stake - stake
                     cn_fallback_profit += cn_actual_sp * stake - stake
                 else:
                     # Defensive guard for malformed CN rows on winning outcomes.
                     cn_fallback_profit += eu_odds_bet * stake - stake
             else:
+                cn_covered += 1
+                cn_bets += 1
                 cn_profit -= stake
                 cn_fallback_profit -= stake
         else:

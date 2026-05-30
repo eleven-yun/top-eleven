@@ -72,6 +72,7 @@ TASK_PLAY_TYPE = {
 LABEL_NAMES = {0: "home_win", 1: "draw", 2: "away_win"}
 
 STAKE_PER_BET = 2.0  # ¥2 minimum lottery ticket
+CHINA_TZ = timezone(timedelta(hours=8))
 
 
 # ---------------------------------------------------------------------------
@@ -217,17 +218,27 @@ def run_issue_predict(
     """
     prematch_by_id, meta_by_id, market_by_id, meta_records = load_all_data(root)
 
-    # Partition all match_ids by date
+    # Partition all match_ids by China local date (issue date semantics are UTC+8)
     train_ids = []
     target_ids = []
     for r in meta_records:
         mid = r["match_id"]
-        d = r.get("datetime_utc", "")[:10]
-        if not d:
+        dt_utc_str = r.get("datetime_utc", "")
+        if not dt_utc_str:
             continue
-        if d < pred_date_str:
+
+        try:
+            dt_utc = datetime.fromisoformat(dt_utc_str.replace("Z", "+00:00"))
+            if dt_utc.tzinfo is None:
+                dt_utc = dt_utc.replace(tzinfo=timezone.utc)
+            issue_date = dt_utc.astimezone(CHINA_TZ).strftime("%Y-%m-%d")
+        except ValueError:
+            # Fall back to raw date prefix when datetime is malformed.
+            issue_date = dt_utc_str[:10]
+
+        if issue_date < pred_date_str:
             train_ids.append(mid)
-        elif d == pred_date_str:
+        elif issue_date == pred_date_str:
             target_ids.append(mid)
 
     print(f"Prediction date: {pred_date_str}")
@@ -439,8 +450,7 @@ def print_summary(picks, pred_date_str, ev_threshold, min_confidence):
 # ---------------------------------------------------------------------------
 
 def main():
-    china_tz = timezone(timedelta(hours=8))
-    today_str = datetime.now(china_tz).strftime("%Y-%m-%d")
+    today_str = datetime.now(CHINA_TZ).strftime("%Y-%m-%d")
 
     parser = argparse.ArgumentParser(
         description="Issue-based pre-match pick generation for football lottery."

@@ -20,7 +20,8 @@ from pathlib import Path
 import requests
 
 BASE_URL = "https://zx.500.com/jczq/kaijiang.php"
-OUTPUT_FILE = Path("data/raw/china_lottery/odds_raw.jsonl")
+ROOT = Path(__file__).resolve().parent.parent
+OUTPUT_FILE = ROOT / "data" / "raw" / "china_lottery" / "odds_raw.jsonl"
 DEFAULT_START = "2024-08-01"
 DEFAULT_END = "2025-06-01"
 
@@ -108,6 +109,7 @@ def parse_page(html: str, date_str: str) -> list[dict]:
             continue
 
         issue_no = m.group(1).strip()
+        issue_id = f"{date_str}-{issue_no}"
         league = m.group(2).strip()
         kickoff_raw = m.group(3).strip()  # e.g. "03-16 07:30"
         home_team = m.group(4).strip()
@@ -178,8 +180,8 @@ def parse_page(html: str, date_str: str) -> list[dict]:
 
             records.append({
                 "source_site": "500.com",
-                "source_match_id": issue_no,
-                "issue_no": issue_no,
+                "source_match_id": issue_id,
+                "issue_no": issue_id,
                 "play_type_raw": "让球胜平负",
                 "league_name_raw": league,
                 "kickoff_local": kickoff_local,
@@ -210,8 +212,8 @@ def parse_page(html: str, date_str: str) -> list[dict]:
 
             records.append({
                 "source_site": "500.com",
-                "source_match_id": issue_no,
-                "issue_no": issue_no,
+                "source_match_id": issue_id,
+                "issue_no": issue_id,
                 "play_type_raw": "胜平负",
                 "league_name_raw": league,
                 "kickoff_local": kickoff_local,
@@ -236,7 +238,11 @@ def main():
     )
     parser.add_argument("--start", default=DEFAULT_START, help="Start date YYYY-MM-DD")
     parser.add_argument("--end", default=DEFAULT_END, help="End date YYYY-MM-DD")
-    parser.add_argument("--output", default=str(OUTPUT_FILE), help="Output JSONL path")
+    parser.add_argument(
+        "--output",
+        default=str(OUTPUT_FILE),
+        help="Output JSONL path (relative paths resolve from repo root)",
+    )
     parser.add_argument("--delay", type=float, default=1.5, help="Seconds between requests")
     parser.add_argument(
         "--append",
@@ -247,7 +253,8 @@ def main():
 
     start_date = date.fromisoformat(args.start)
     end_date = date.fromisoformat(args.end)
-    out_path = Path(args.output)
+    out_arg = Path(args.output)
+    out_path = out_arg if out_arg.is_absolute() else (ROOT / out_arg)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     mode = "a" if args.append else "w"
