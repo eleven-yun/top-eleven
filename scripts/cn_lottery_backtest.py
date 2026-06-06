@@ -519,6 +519,26 @@ def main():
         f"{'ROI':<30} {str(results['eu_roi_pct'])+'%':>12} {str(results['cn_roi_pct'])+'%':>12} "
         f"{str(results['cn_fallback_roi_pct'])+'%':>16} {str(results['prematch_roi_pct'])+'%':>12}"
     )
+    target = results.get("acceptance_target_coverage_pct", 70.0)
+    acc = results.get("acceptance_coverage", {})
+    cn_raw_cov = acc.get("cn", {}).get("raw", {}).get("coverage_pct", 0.0)
+    cn_supported_cov = acc.get("cn", {}).get("supported_universe", {}).get("coverage_pct", 0.0)
+    prematch_raw_cov = acc.get("prematch", {}).get("raw", {}).get("coverage_pct", 0.0)
+    prematch_supported_cov = acc.get("prematch", {}).get("supported_universe", {}).get("coverage_pct", 0.0)
+
+    def pass_fail(value: float) -> str:
+        return "PASS" if value >= target else "FAIL"
+
+    print("-" * 60)
+    print(f"Acceptance coverage target: >= {target:.1f}%")
+    print(
+        f"  CN raw {cn_raw_cov:.1f}% [{pass_fail(cn_raw_cov)}] | "
+        f"CN supported {cn_supported_cov:.1f}% [{pass_fail(cn_supported_cov)}]"
+    )
+    print(
+        f"  Prematch raw {prematch_raw_cov:.1f}% [{pass_fail(prematch_raw_cov)}] | "
+        f"Prematch supported {prematch_supported_cov:.1f}% [{pass_fail(prematch_supported_cov)}]"
+    )
     if results.get("kelly_enabled"):
         print("-" * 60)
         print(
