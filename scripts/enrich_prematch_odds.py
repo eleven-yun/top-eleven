@@ -279,6 +279,51 @@ def build_report(raw_rows, matched_rows, unresolved_rows, scope_index):
     return report
 
 
+def build_scope_gap_report(raw_rows, unresolved_rows, scope_index):
+    out_of_scope_rows = [row for row in raw_rows if not is_scope_eligible(row, scope_index)]
+    out_of_scope_counter = Counter((row.get("league_name_raw") or "unknown") for row in out_of_scope_rows)
+
+    unresolved_by_league = Counter()
+    for row in unresolved_rows:
+        if not is_scope_eligible(row, scope_index):
+            league = row.get("league_name_raw") or "unknown"
+            unresolved_by_league[league] += 1
+
+    examples = []
+    seen = set()
+    for row in out_of_scope_rows:
+        key = (
+            row.get("source_match_id"),
+            row.get("league_name_raw"),
+            row.get("home_team_raw"),
+            row.get("away_team_raw"),
+            row.get("kickoff_local"),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        examples.append(
+            {
+                "source_match_id": row.get("source_match_id"),
+                "league_name_raw": row.get("league_name_raw"),
+                "home_team_raw": row.get("home_team_raw"),
+                "away_team_raw": row.get("away_team_raw"),
+                "kickoff_local": row.get("kickoff_local"),
+            }
+        )
+        if len(examples) >= 30:
+            break
+
+    return {
+        "total_rows": len(raw_rows),
+        "out_of_scope_rows": len(out_of_scope_rows),
+        "out_of_scope_rate": round(len(out_of_scope_rows) / max(1, len(raw_rows)), 4),
+        "top_out_of_scope_leagues": dict(out_of_scope_counter.most_common(30)),
+        "unresolved_out_of_scope_by_league": dict(unresolved_by_league.most_common(30)),
+        "sample_out_of_scope_rows": examples,
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description="Enrich pre-match closing odds with match metadata")
     parser.add_argument(
@@ -320,6 +365,11 @@ def main():
         "--suggestions-output",
         default="data/processed/prematch_unresolved_alias_suggestions.json",
         help="Output JSON for unresolved in-scope alias suggestions",
+    )
+    parser.add_argument(
+        "--scope-gap-output",
+        default="data/processed/prematch_scope_gap_report.json",
+        help="Output JSON for out-of-scope league rows (dataset expansion candidates)",
     )
     parser.add_argument(
         "--min-score",
@@ -381,6 +431,7 @@ def main():
         scope_index,
         alias_index,
     )
+    scope_gap_report = build_scope_gap_report(odds_rows, unresolved_rows, scope_index)
     report["unresolved_alias_suggestion_sample"] = unresolved_alias_suggestions[:20]
     report["unresolved_alias_actionable"] = sum(
         1 for row in unresolved_alias_suggestions if row.get("actionable")
@@ -398,6 +449,7 @@ def main():
     print(f"  Alias suggestion candidates: {len(unresolved_alias_suggestions)}")
     print(f"    Actionable: {report['unresolved_alias_actionable']}")
     print(f"    Non-actionable: {report['unresolved_alias_non_actionable']}")
+    print(f"  Scope-gap rows: {scope_gap_report['out_of_scope_rows']} ({100*scope_gap_report['out_of_scope_rate']:.1f}%)")
     if report["top_out_of_scope_leagues"]:
         print(f"\nTop out-of-scope leagues:")
         for league, count in report["top_out_of_scope_leagues"].items():
@@ -416,6 +468,9 @@ def main():
 
         write_json(args.suggestions_output, unresolved_alias_suggestions)
         print(f"Wrote unresolved alias suggestions to {args.suggestions_output}")
+
+        write_json(args.scope_gap_output, scope_gap_report)
+        print(f"Wrote scope gap report to {args.scope_gap_output}")
 
 
 if __name__ == "__main__":
