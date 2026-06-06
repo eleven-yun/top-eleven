@@ -123,6 +123,24 @@ def main() -> None:
     )
 
     preds = load_jsonl(str(pred_path))
+    input_temperatures = []
+    for p in preds:
+        t = p.get("temperature")
+        if t is None:
+            continue
+        try:
+            input_temperatures.append(float(t))
+        except (TypeError, ValueError):
+            continue
+    if input_temperatures:
+        min_t = min(input_temperatures)
+        max_t = max(input_temperatures)
+        if abs(min_t - 1.0) > 1e-9 or abs(max_t - 1.0) > 1e-9:
+            print(
+                "Warning: input predictions appear already temperature-scaled "
+                f"(temperature range {min_t:.4f}-{max_t:.4f}). "
+                "Calibrate from raw predictions (temperature=1.0) to avoid circular diagnostics."
+            )
     meta_rows = load_jsonl(str(meta_path))
     prematch_rows = load_jsonl(str(prematch_path))
     match_to_dt = {r.get("match_id"): r.get("datetime_utc", "") for r in meta_rows}

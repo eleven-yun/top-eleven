@@ -374,7 +374,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Configure scope expansion batch-1 in `config/data_config.json` (Eredivisie `N1`, Primeira Liga `P1`, Super Lig `T1`) for coverage uplift trials
 - [x] Configure scope expansion batch-2 in `config/data_config.json` (League One `E2`, League Two `E3`, Scottish Premiership `SC0`, Pro League `B1`) and extend CN league alias normalization (`英甲/英乙/比甲`)
 - [x] Re-run backtest with pre-match CN odds
-  - 2025/26 test split (EV≥0.05, conf≥0.55):
+  - 2025/26 test split (EV≥0.05, conf≥0.55) baseline snapshot:
     - EU ROI: +1.67%
     - CN SP ROI: +3.96% (23.2% coverage)
     - Pre-match ROI: +9.71% (56.3% coverage)
@@ -382,6 +382,11 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
   - In-scope eligibility is now pinned to `config/data_config.json` requested competitions for deterministic coverage tracking
   - Post batch-1 scope check (`enrich_prematch_odds.py --dry-run`): out-of-scope share improved from 55.5% -> 48.3%, in-scope rows increased 7713 -> 8974, in-scope coverage currently 84.7% with 674 unresolved in-scope alias rows
   - Post batch-2 scope check (`enrich_prematch_odds.py --dry-run`): out-of-scope share improved 48.3% -> 47.6%, in-scope rows increased 8974 -> 9100, in-scope coverage currently 83.5% with 730 unresolved in-scope alias rows
+  - Post full dataset rebuild (17 leagues): 47.9% overall prematch match rate, 91.4% in-scope matching coverage, unresolved in-scope alias backlog reduced to 390 rows
+  - Refreshed backtest (17-league test split, EV≥0.05/conf≥0.55):
+    - Handicap pre-match coverage: 35.5% (ROI +7.2%)
+    - Fulltime pre-match coverage: 61.5% (ROI -19.15%)
+    - Threshold sweep on handicap shows max observed pre-match coverage 40.1%, indicating current 70% target is not reachable under present data support
 
 ### 9B — Probability Calibration
 - [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split
@@ -391,6 +396,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Validate calibration on promoted-team match slice specifically
 - [x] Add objective-driven temperature search (`--objective ece|nll|brier`) in `calibrate_temperature.py`
   - Handicap test holdout ECE improved 0.03307 -> 0.012897 with ECE-optimized temperature (`T=1.37`)
+- [x] Add guardrail warning in calibration diagnostics when input predictions are already temperature-scaled
 
 ### 9C — Kelly Criterion Staking
 - [x] Implement fractional Kelly sizing in `cn_lottery_backtest.py` (`f = (p * odds - 1) / (odds - 1)`), with bankroll and max-stake cap
@@ -413,8 +419,8 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Re-scrape 500.com CN lottery SP for 2025/26 period
 
 ### Acceptance criteria
-- [ ] CN coverage ≥ 70% with pre-match odds scraper (current: 56.3%)
-- [x] Calibration: ECE < 0.015 after temperature scaling (handicap holdout ECE: 0.012897)
+- [ ] CN coverage ≥ 70% with pre-match odds scraper (current refreshed handicap: 35.5%; observed max in threshold sweep: 40.1%)
+- [ ] Calibration: ECE < 0.015 after temperature scaling (current refreshed raw-prob holdout ECE: 0.017056)
 - [x] Kelly-sized backtest reported alongside flat-stake baseline
 - [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)
 
