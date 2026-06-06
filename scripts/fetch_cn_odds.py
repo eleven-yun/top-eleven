@@ -73,6 +73,21 @@ def parse_page(html: str, date_str: str) -> list[dict]:
     """Parse kaijiang HTML page for one date and return list of records."""
     records = []
 
+    def shift_year_safe(dt: datetime, target_year: int) -> datetime:
+        """Shift year while handling leap-day edge cases safely."""
+        try:
+            return dt.replace(year=target_year)
+        except ValueError:
+            # Handles Feb-29 -> non-leap-year by clamping day downward.
+            day = dt.day
+            while day > 28:
+                day -= 1
+                try:
+                    return dt.replace(year=target_year, day=day)
+                except ValueError:
+                    continue
+            return dt.replace(year=target_year, month=2, day=28)
+
     # Isolate the main results table to avoid false matches in login/nav areas
     # The main table starts after the header row
     table_match = re.search(
@@ -127,8 +142,8 @@ def parse_page(html: str, date_str: str) -> list[dict]:
             kickoff_cn_dt = datetime.strptime(kickoff_cn_str, "%Y-%m-%d %H:%M")
             delta_days = abs((kickoff_cn_dt.date() - page_dt.date()).days)
             if delta_days > 180:
-                prev_year = kickoff_cn_dt.replace(year=kickoff_cn_dt.year - 1)
-                next_year = kickoff_cn_dt.replace(year=kickoff_cn_dt.year + 1)
+                prev_year = shift_year_safe(kickoff_cn_dt, kickoff_cn_dt.year - 1)
+                next_year = shift_year_safe(kickoff_cn_dt, kickoff_cn_dt.year + 1)
                 kickoff_cn_dt = min(
                     (kickoff_cn_dt, prev_year, next_year),
                     key=lambda x: abs((x.date() - page_dt.date()).days),

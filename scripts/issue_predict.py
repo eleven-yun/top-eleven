@@ -339,7 +339,7 @@ def run_issue_predict(
 
             all_picks.append({
                 "match_id": mid,
-                "date": meta.get("datetime_utc", "")[:10],
+                "date": pred_date_str,
                 "league": meta.get("league_code", ""),
                 "home_team": pf.get("home", {}).get("team_name", meta.get("home_team_id", "?")),
                 "away_team": pf.get("away", {}).get("team_name", meta.get("away_team_id", "?")),

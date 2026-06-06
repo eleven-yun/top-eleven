@@ -91,7 +91,7 @@ python scripts/issue_predict.py --date 2025-03-15 \
 **Output**: CLI pick slip table + JSON file at `output/picks/<date>.json`
 
 > **Note on odds**: The current pipeline uses European bookmaker odds as a proxy.
-> China Lottery parimutuel odds differ (higher take-out ~35%).
+> China Lottery parimutuel odds differ (typical take-out ~25-30%).
 > `lottery_market_cn.jsonl` from `fetch_cn_odds.py` stores post-match settlement
 > SP for the realized outcome only, so it should not be used with
 > `backtest_ev.py --market` for pre-match EV screening.
