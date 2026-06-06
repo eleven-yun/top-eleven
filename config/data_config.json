@@ -201,6 +201,66 @@
         "2025/2026"
       ],
       "division_level": 1
+    },
+    {
+      "country_name": "England",
+      "competition_name": "League One",
+      "league_code": "E2",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025",
+        "2025/2026"
+      ],
+      "division_level": 3
+    },
+    {
+      "country_name": "England",
+      "competition_name": "League Two",
+      "league_code": "E3",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025",
+        "2025/2026"
+      ],
+      "division_level": 4
+    },
+    {
+      "country_name": "Scotland",
+      "competition_name": "Scottish Premiership",
+      "league_code": "SC0",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025",
+        "2025/2026"
+      ],
+      "division_level": 1
+    },
+    {
+      "country_name": "Belgium",
+      "competition_name": "Pro League",
+      "league_code": "B1",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025",
+        "2025/2026"
+      ],
+      "division_level": 1
     }
   ],
   "validation_fallback_competitions": [
