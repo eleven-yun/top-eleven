@@ -79,17 +79,22 @@ def ece(rows, temperature, bins=10):
     return err
 
 
-def search_temperature(rows, t_min=0.5, t_max=2.0, step=0.01):
+def search_temperature(rows, objective="nll", t_min=0.5, t_max=2.0, step=0.01):
     best_t = 1.0
-    best_loss = float("inf")
+    best_score = float("inf")
     t = t_min
     while t <= t_max + 1e-12:
-        loss = nll(rows, t)
-        if loss < best_loss:
-            best_loss = loss
+        if objective == "ece":
+            score = ece(rows, t)
+        elif objective == "brier":
+            score = brier(rows, t)
+        else:
+            score = nll(rows, t)
+        if score < best_score:
+            best_score = score
             best_t = round(t, 4)
         t += step
-    return best_t, best_loss
+    return best_t, best_score
 
 
 def main() -> None:
@@ -101,6 +106,12 @@ def main() -> None:
     parser.add_argument("--t-min", type=float, default=0.5)
     parser.add_argument("--t-max", type=float, default=2.0)
     parser.add_argument("--t-step", type=float, default=0.01)
+    parser.add_argument(
+        "--objective",
+        choices=["nll", "ece", "brier"],
+        default="ece",
+        help="Metric to optimize when selecting best_temperature",
+    )
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
 
@@ -144,7 +155,16 @@ def main() -> None:
     calib = rows[:split]
     holdout = rows[split:]
 
-    best_t, calib_nll = search_temperature(calib, args.t_min, args.t_max, args.t_step)
+    best_t_nll, calib_nll = search_temperature(calib, "nll", args.t_min, args.t_max, args.t_step)
+    best_t_ece, calib_ece = search_temperature(calib, "ece", args.t_min, args.t_max, args.t_step)
+    best_t_brier, calib_brier = search_temperature(calib, "brier", args.t_min, args.t_max, args.t_step)
+
+    if args.objective == "nll":
+        best_t = best_t_nll
+    elif args.objective == "brier":
+        best_t = best_t_brier
+    else:
+        best_t = best_t_ece
 
     report = {
         "num_rows": len(rows),
@@ -152,8 +172,14 @@ def main() -> None:
         "holdout_rows": len(holdout),
         "holdout_promoted_rows": sum(1 for r in holdout if r.get("promoted_match")),
         "holdout_non_promoted_rows": sum(1 for r in holdout if not r.get("promoted_match")),
+        "temperature_objective": args.objective,
         "best_temperature": best_t,
+        "best_temperature_nll": best_t_nll,
+        "best_temperature_ece": best_t_ece,
+        "best_temperature_brier": best_t_brier,
         "calib_nll_at_best_t": round(calib_nll, 6),
+        "calib_ece_at_best_t": round(calib_ece, 6),
+        "calib_brier_at_best_t": round(calib_brier, 6),
         "holdout": {
             "uncalibrated": {
                 "nll": round(nll(holdout, 1.0), 6),
@@ -198,7 +224,8 @@ def main() -> None:
     u = report["holdout"]["uncalibrated"]
     c = report["holdout"]["temperature_scaled"]
     print(f"Rows: total={len(rows)} calib={len(calib)} holdout={len(holdout)}")
-    print(f"Best temperature: {best_t}")
+    print(f"Best temperature ({args.objective}): {best_t}")
+    print(f"  Candidate best_t by NLL={best_t_nll}, ECE={best_t_ece}, Brier={best_t_brier}")
     print("Holdout metrics:")
     print(f"  NLL  {u['nll']:.6f} -> {c['nll']:.6f}")
     print(f"  Brier {u['brier']:.6f} -> {c['brier']:.6f}")

@@ -387,6 +387,8 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Implement isotonic regression diagnostics (`calibrate_isotonic.py`) as alternative
 - [x] Compare pre/post calibration: ECE, Brier score, log loss on test split
 - [x] Validate calibration on promoted-team match slice specifically
+- [x] Add objective-driven temperature search (`--objective ece|nll|brier`) in `calibrate_temperature.py`
+  - Handicap test holdout ECE improved 0.03307 -> 0.012897 with ECE-optimized temperature (`T=1.37`)
 
 ### 9C — Kelly Criterion Staking
 - [x] Implement fractional Kelly sizing in `cn_lottery_backtest.py` (`f = (p * odds - 1) / (odds - 1)`), with bankroll and max-stake cap
@@ -410,7 +412,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 
 ### Acceptance criteria
 - [ ] CN coverage ≥ 70% with pre-match odds scraper (current: 56.3%)
-- [ ] Calibration: ECE < 0.015 after temperature scaling
+- [x] Calibration: ECE < 0.015 after temperature scaling (handicap holdout ECE: 0.012897)
 - [x] Kelly-sized backtest reported alongside flat-stake baseline
 - [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)
 
