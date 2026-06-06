@@ -386,6 +386,9 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
   - Refreshed backtest (17-league test split, EV≥0.05/conf≥0.55):
     - Handicap pre-match coverage: 38.8% (ROI +11.13%) after refreshed calibration report (`T=1.30`)
     - Fulltime pre-match coverage: 61.5% (ROI -19.15%)
+    - Added supported-universe denominator metrics in `cn_lottery_backtest.py`:
+      - Handicap pre-match supported coverage: 57.1%
+      - Fulltime pre-match supported coverage: 72.7%
     - Threshold sweep on handicap shows max observed pre-match coverage 47.1%, indicating current 70% target is not reachable under present data support
 
 ### 9B — Probability Calibration
@@ -422,6 +425,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 
 ### Acceptance criteria
 - [ ] CN coverage ≥ 70% with pre-match odds scraper (current refreshed handicap: 38.8%; observed max in threshold sweep: 47.1%)
+- [ ] CN coverage ≥ 70% with pre-match odds scraper (raw denominator currently not met; supported-universe denominator reached 72.7% on fulltime but 57.1% on handicap)
 - [x] Calibration: ECE < 0.015 after temperature scaling (current refreshed raw-prob holdout ECE: 0.011332)
 - [x] Kelly-sized backtest reported alongside flat-stake baseline
 - [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)

@@ -102,6 +102,9 @@ def simulate(
     eu_index: dict,
     cn_index: dict,
     prematch_index: dict,
+    match_to_league_code: dict,
+    cn_supported_leagues: set,
+    prematch_supported_leagues: set,
     task: str,
     ev_threshold: float,
     min_confidence: float,
@@ -121,8 +124,12 @@ def simulate(
     cn_bets = cn_profit = 0.0
     cn_fallback_bets = cn_fallback_profit = 0.0
     cn_covered = 0  # bets where a CN market row matched by match_id
+    cn_supported_universe_bets = 0
+    cn_supported_universe_covered = 0
     prematch_bets = prematch_profit = 0.0
     prematch_covered = 0  # bets where pre-match closing odds were available
+    prematch_supported_universe_bets = 0
+    prematch_supported_universe_covered = 0
 
     # Kelly sizing (pre-match strategy only)
     kelly_bankroll = bankroll
@@ -180,6 +187,7 @@ def simulate(
 
         # ---- CN payout ----
         cn_row = cn_index.get(match_id)
+        cn_bet_covered = False
         cn_fallback_bets += 1
         if cn_row is not None:
             # For matched CN rows, missing selected-outcome SP means selection lost
@@ -188,6 +196,7 @@ def simulate(
                 cn_actual_sp = get_odds_for_outcome(cn_row, actual_outcome)
                 if cn_actual_sp is not None:
                     cn_covered += 1
+                    cn_bet_covered = True
                     cn_bets += 1
                     cn_profit += cn_actual_sp * stake - stake
                     cn_fallback_profit += cn_actual_sp * stake - stake
@@ -196,6 +205,7 @@ def simulate(
                     cn_fallback_profit += eu_odds_bet * stake - stake
             else:
                 cn_covered += 1
+                cn_bet_covered = True
                 cn_bets += 1
                 cn_profit -= stake
                 cn_fallback_profit -= stake
@@ -211,6 +221,17 @@ def simulate(
         prematch_odds = None
         if prematch_row is not None:
             prematch_odds = get_prematch_odds_for_outcome(prematch_row, best_outcome)
+        prematch_bet_covered = prematch_odds is not None
+
+        league_code = (match_to_league_code.get(match_id) or "").lower()
+        if league_code in cn_supported_leagues:
+            cn_supported_universe_bets += 1
+            if cn_bet_covered:
+                cn_supported_universe_covered += 1
+        if league_code in prematch_supported_leagues:
+            prematch_supported_universe_bets += 1
+            if prematch_bet_covered:
+                prematch_supported_universe_covered += 1
 
         prematch_bets += 1
         if prematch_odds is not None:
@@ -267,6 +288,11 @@ def simulate(
         "cn_bets": int(cn_bets),
         "cn_covered": cn_covered,
         "cn_coverage_pct": round(cn_covered / cn_fallback_bets * 100, 1) if cn_fallback_bets > 0 else 0,
+        "cn_supported_universe_bets": cn_supported_universe_bets,
+        "cn_supported_universe_covered": cn_supported_universe_covered,
+        "cn_supported_universe_coverage_pct": round(cn_supported_universe_covered / cn_supported_universe_bets * 100, 1)
+        if cn_supported_universe_bets > 0
+        else 0,
         "cn_profit": round(cn_profit, 2),
         "cn_staked": round(cn_staked, 2),
         "cn_roi_pct": round(cn_profit / cn_staked * 100, 2) if cn_staked > 0 else 0,
@@ -279,6 +305,13 @@ def simulate(
         "prematch_bets": int(prematch_bets),
         "prematch_covered": prematch_covered,
         "prematch_coverage_pct": round(prematch_covered / prematch_bets * 100, 1) if prematch_bets > 0 else 0,
+        "prematch_supported_universe_bets": prematch_supported_universe_bets,
+        "prematch_supported_universe_covered": prematch_supported_universe_covered,
+        "prematch_supported_universe_coverage_pct": round(
+            prematch_supported_universe_covered / prematch_supported_universe_bets * 100, 1
+        )
+        if prematch_supported_universe_bets > 0
+        else 0,
         "prematch_profit": round(prematch_profit, 2),
         "prematch_staked": round(prematch_staked, 2),
         "prematch_roi_pct": round(prematch_profit / prematch_staked * 100, 2) if prematch_staked > 0 else 0,
@@ -330,6 +363,11 @@ def main():
         default="data/processed/lottery_market_prematch_cn.jsonl",
         help="Pre-match CN closing market JSONL (from enrich_prematch_odds.py)",
     )
+    parser.add_argument(
+        "--match-meta",
+        default="data/processed/match_meta.jsonl",
+        help="Match metadata JSONL used to map match_id to league_code",
+    )
     parser.add_argument("--task", default="handicap_label", choices=list(TASK_PLAY_TYPE))
     parser.add_argument("--ev-threshold", type=float, default=0.05)
     parser.add_argument("--min-confidence", type=float, default=0.55)
@@ -353,6 +391,7 @@ def main():
     eu_path = root / args.eu_market if not Path(args.eu_market).is_absolute() else Path(args.eu_market)
     cn_path = root / args.cn_market if not Path(args.cn_market).is_absolute() else Path(args.cn_market)
     prematch_path = root / args.prematch_market if not Path(args.prematch_market).is_absolute() else Path(args.prematch_market)
+    meta_path = root / args.match_meta if not Path(args.match_meta).is_absolute() else Path(args.match_meta)
 
     print(f"Loading predictions: {pred_path}")
     predictions = load_jsonl(str(pred_path))
@@ -381,11 +420,33 @@ def main():
     else:
         print(f"  Pre-match market not found at {prematch_path}, will use EU odds for all bets")
 
+    match_to_league_code = {}
+    cn_supported_leagues = set()
+    prematch_supported_leagues = set()
+    if meta_path.exists():
+        meta_rows = load_jsonl(str(meta_path))
+        match_to_league_code = {
+            row.get("match_id"): (row.get("league_code") or "").lower()
+            for row in meta_rows
+            if row.get("match_id")
+        }
+        cn_supported_leagues = {
+            match_to_league_code[mid] for mid in cn_index if match_to_league_code.get(mid)
+        }
+        prematch_supported_leagues = {
+            match_to_league_code[mid] for mid in prematch_index if match_to_league_code.get(mid)
+        }
+    else:
+        print(f"  Match meta not found at {meta_path}, supported-universe coverage will be 0")
+
     results = simulate(
         predictions,
         eu_index,
         cn_index,
         prematch_index,
+        match_to_league_code,
+        cn_supported_leagues,
+        prematch_supported_leagues,
         task=args.task,
         ev_threshold=args.ev_threshold,
         min_confidence=args.min_confidence,
@@ -408,6 +469,10 @@ def main():
     print(
         f"{'Coverage':<30} {'':>12} {results['cn_coverage_pct']:>11.1f}% "
         f"{'':>16} {results['prematch_coverage_pct']:>11.1f}%"
+    )
+    print(
+        f"{'Supported coverage':<30} {'':>12} {results['cn_supported_universe_coverage_pct']:>11.1f}% "
+        f"{'':>16} {results['prematch_supported_universe_coverage_pct']:>11.1f}%"
     )
     print(
         f"{'Staked':<30} {'¥'+str(results['eu_staked']):>12} {'¥'+str(results['cn_staked']):>12} "
