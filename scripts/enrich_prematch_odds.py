@@ -282,6 +282,10 @@ def build_report(raw_rows, matched_rows, unresolved_rows, scope_index):
 def build_scope_gap_report(raw_rows, unresolved_rows, scope_index):
     out_of_scope_rows = [row for row in raw_rows if not is_scope_eligible(row, scope_index)]
     out_of_scope_counter = Counter((row.get("league_name_raw") or "unknown") for row in out_of_scope_rows)
+    resolved_league_counter = Counter(
+        LEAGUE_ALIAS_CN.get((row.get("league_name_raw") or "").strip().lower(), (row.get("league_name_raw") or "unknown"))
+        for row in out_of_scope_rows
+    )
 
     unresolved_by_league = Counter()
     for row in unresolved_rows:
@@ -319,6 +323,15 @@ def build_scope_gap_report(raw_rows, unresolved_rows, scope_index):
         "out_of_scope_rows": len(out_of_scope_rows),
         "out_of_scope_rate": round(len(out_of_scope_rows) / max(1, len(raw_rows)), 4),
         "top_out_of_scope_leagues": dict(out_of_scope_counter.most_common(30)),
+        "top_out_of_scope_resolved_leagues": dict(resolved_league_counter.most_common(30)),
+        "suggested_competition_priority": [
+            {
+                "competition_name": league,
+                "rows": count,
+                "share_of_out_of_scope": round(count / max(1, len(out_of_scope_rows)), 4),
+            }
+            for league, count in resolved_league_counter.most_common(20)
+        ],
         "unresolved_out_of_scope_by_league": dict(unresolved_by_league.most_common(30)),
         "sample_out_of_scope_rows": examples,
     }
@@ -450,6 +463,11 @@ def main():
     print(f"    Actionable: {report['unresolved_alias_actionable']}")
     print(f"    Non-actionable: {report['unresolved_alias_non_actionable']}")
     print(f"  Scope-gap rows: {scope_gap_report['out_of_scope_rows']} ({100*scope_gap_report['out_of_scope_rate']:.1f}%)")
+    if scope_gap_report["suggested_competition_priority"]:
+        print(f"  Suggested expansion priorities (resolved leagues):")
+        for item in scope_gap_report["suggested_competition_priority"][:10]:
+            pct = item["share_of_out_of_scope"] * 100
+            print(f"    {item['competition_name']}: {item['rows']} rows ({pct:.1f}%)")
     if report["top_out_of_scope_leagues"]:
         print(f"\nTop out-of-scope leagues:")
         for league, count in report["top_out_of_scope_leagues"].items():
