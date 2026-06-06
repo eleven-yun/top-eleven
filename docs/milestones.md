@@ -389,6 +389,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
     - Added supported-universe denominator metrics in `cn_lottery_backtest.py`:
       - Handicap pre-match supported coverage: 57.1%
       - Fulltime pre-match supported coverage: 72.7%
+    - Added canonical `acceptance_coverage` block in backtest JSON outputs for dashboard ingestion (`raw` and `supported_universe` denominators with explicit `covered`/`bets`/`coverage_pct`)
     - Threshold sweep on handicap shows max observed pre-match coverage 47.1%, indicating current 70% target is not reachable under present data support
 
 ### 9B — Probability Calibration

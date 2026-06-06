@@ -335,6 +335,39 @@ def simulate(
         "kelly_profit": round(kelly_bankroll - bankroll, 2),
         "kelly_roi_pct": round((kelly_bankroll - bankroll) / bankroll * 100, 2) if bankroll > 0 else 0,
         "kelly_max_drawdown_pct": round(kelly_max_drawdown_pct, 2),
+        "acceptance_target_coverage_pct": 70.0,
+        "acceptance_coverage": {
+            "cn": {
+                "raw": {
+                    "covered": cn_covered,
+                    "bets": int(cn_fallback_bets),
+                    "coverage_pct": round(cn_covered / cn_fallback_bets * 100, 1) if cn_fallback_bets > 0 else 0,
+                },
+                "supported_universe": {
+                    "covered": cn_supported_universe_covered,
+                    "bets": cn_supported_universe_bets,
+                    "coverage_pct": round(cn_supported_universe_covered / cn_supported_universe_bets * 100, 1)
+                    if cn_supported_universe_bets > 0
+                    else 0,
+                },
+            },
+            "prematch": {
+                "raw": {
+                    "covered": prematch_covered,
+                    "bets": int(prematch_bets),
+                    "coverage_pct": round(prematch_covered / prematch_bets * 100, 1) if prematch_bets > 0 else 0,
+                },
+                "supported_universe": {
+                    "covered": prematch_supported_universe_covered,
+                    "bets": prematch_supported_universe_bets,
+                    "coverage_pct": round(
+                        prematch_supported_universe_covered / prematch_supported_universe_bets * 100, 1
+                    )
+                    if prematch_supported_universe_bets > 0
+                    else 0,
+                },
+            },
+        },
         "ev_threshold": ev_threshold,
         "min_confidence": min_confidence,
         "stake_per_bet": stake,
