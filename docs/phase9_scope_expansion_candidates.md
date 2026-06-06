@@ -5,10 +5,13 @@ This note captures the largest out-of-scope league buckets from
 
 ## Current Gap Snapshot
 
-- Out-of-scope rows: 9641
-- Out-of-scope share: 55.55%
+- Out-of-scope rows: 8380 (after scope expansion batch-1)
+- Out-of-scope share: 48.30% (down from 55.55%)
 - Current pre-match coverage on 2025/26 test: 56.3%
 - Phase 9 acceptance target: >= 70% pre-match CN coverage
+- Current in-scope rows under expanded config: 8974 (up from 7713)
+- Current in-scope matching coverage: 84.7%
+- Current in-scope unresolved alias backlog: 674 rows
 
 ## Top Candidate Competitions
 
@@ -16,18 +19,18 @@ Ranked by share of out-of-scope rows in current pre-match scrape:
 
 | Rank | Competition (resolved) | Rows | Share of out-of-scope |
 |---|---|---:|---:|
-| 1 | 欧冠 | 678 | 7.03% |
-| 2 | eredivisie | 647 | 6.71% |
-| 3 | primeira liga | 614 | 6.37% |
-| 4 | j-league | 574 | 5.95% |
-| 5 | 欧罗巴 | 553 | 5.74% |
-| 6 | mls | 529 | 5.49% |
-| 7 | allsvenskan | 489 | 5.07% |
-| 8 | eliteserien | 470 | 4.88% |
-| 9 | 澳超 | 462 | 4.79% |
-| 10 | K1联赛 | 454 | 4.71% |
-| 11 | 荷乙 | 333 | 3.45% |
-| 12 | 日职乙 | 288 | 2.99% |
+| 1 | 欧冠 | 678 | 8.09% |
+| 2 | j-league | 574 | 6.85% |
+| 3 | 欧罗巴 | 553 | 6.60% |
+| 4 | mls | 529 | 6.31% |
+| 5 | allsvenskan | 489 | 5.84% |
+| 6 | eliteserien | 470 | 5.61% |
+| 7 | 澳超 | 462 | 5.51% |
+| 8 | K1联赛 | 454 | 5.42% |
+| 9 | 荷乙 | 333 | 3.97% |
+| 10 | 日职乙 | 288 | 3.44% |
+| 11 | 俄超 | 285 | 3.40% |
+| 12 | 德丙 | 231 | 2.76% |
 
 ## Execution Order Suggestion
 

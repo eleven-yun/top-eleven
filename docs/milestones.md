@@ -371,6 +371,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Add scope-aware coverage reporting in `enrich_prematch_odds.py` to separate in-dataset rows from out-of-scope competitions
 - [x] Add `prematch_scope_gap_report.json` output to track out-of-scope league volume as dataset expansion candidates
 - [x] Add `docs/phase9_scope_expansion_candidates.md` with ranked expansion priorities from latest scope-gap report
+- [x] Configure scope expansion batch-1 in `config/data_config.json` (Eredivisie `N1`, Primeira Liga `P1`, Super Lig `T1`) for coverage uplift trials
 - [x] Re-run backtest with pre-match CN odds
   - 2025/26 test split (EV≥0.05, conf≥0.55):
     - EU ROI: +1.67%
@@ -378,6 +379,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
     - Pre-match ROI: +9.71% (56.3% coverage)
   - Prematch matcher status (current raw scrape): 43.8% overall match rate, 98.6% in-scope coverage after alias expansion
   - In-scope eligibility is now pinned to `config/data_config.json` requested competitions for deterministic coverage tracking
+  - Post batch-1 scope check (`enrich_prematch_odds.py --dry-run`): out-of-scope share improved from 55.5% -> 48.3%, in-scope rows increased 7713 -> 8974, in-scope coverage currently 84.7% with 674 unresolved in-scope alias rows
 
 ### 9B — Probability Calibration
 - [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split

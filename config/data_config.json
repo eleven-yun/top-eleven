@@ -156,6 +156,51 @@
         "2025/2026"
       ],
       "division_level": 2
+    },
+    {
+      "country_name": "Netherlands",
+      "competition_name": "Eredivisie",
+      "league_code": "N1",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025",
+        "2025/2026"
+      ],
+      "division_level": 1
+    },
+    {
+      "country_name": "Portugal",
+      "competition_name": "Primeira Liga",
+      "league_code": "P1",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025",
+        "2025/2026"
+      ],
+      "division_level": 1
+    },
+    {
+      "country_name": "Turkey",
+      "competition_name": "Super Lig",
+      "league_code": "T1",
+      "season_names": [
+        "2019/2020",
+        "2020/2021",
+        "2021/2022",
+        "2022/2023",
+        "2023/2024",
+        "2024/2025",
+        "2025/2026"
+      ],
+      "division_level": 1
     }
   ],
   "validation_fallback_competitions": [

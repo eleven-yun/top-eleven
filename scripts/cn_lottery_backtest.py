@@ -341,7 +341,7 @@ def main():
         "--kelly-max-stake-pct",
         type=float,
         default=0.05,
-        help="Cap Kelly stake as fraction of bankroll per bet (e.g., 0.05 = 5%)",
+        help="Cap Kelly stake as fraction of bankroll per bet (e.g., 0.05 = 5%%)",
     )
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
