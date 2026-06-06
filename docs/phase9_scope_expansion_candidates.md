@@ -12,7 +12,7 @@ This note captures the largest out-of-scope league buckets from
 - Current in-scope rows under expanded config: 9100 (up from 7713)
 - Current in-scope matching coverage: 91.4%
 - Current in-scope unresolved alias backlog: 390 rows
-- Current observed max handicap pre-match coverage in threshold sweep: 40.1%
+- Current observed max handicap pre-match coverage in threshold sweep: 47.1%
 
 ## Top Candidate Competitions
 

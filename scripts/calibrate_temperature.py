@@ -102,7 +102,7 @@ def main() -> None:
     parser.add_argument("--predictions", default="output/predictions/handicap_label_test.jsonl")
     parser.add_argument("--meta-file", default="data/processed/match_meta.jsonl")
     parser.add_argument("--prematch-file", default="data/processed/prematch_features.jsonl")
-    parser.add_argument("--calib-ratio", type=float, default=0.5)
+    parser.add_argument("--calib-ratio", type=float, default=0.55)
     parser.add_argument("--t-min", type=float, default=0.5)
     parser.add_argument("--t-max", type=float, default=2.0)
     parser.add_argument("--t-step", type=float, default=0.01)

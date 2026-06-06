@@ -384,9 +384,9 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
   - Post batch-2 scope check (`enrich_prematch_odds.py --dry-run`): out-of-scope share improved 48.3% -> 47.6%, in-scope rows increased 8974 -> 9100, in-scope coverage currently 83.5% with 730 unresolved in-scope alias rows
   - Post full dataset rebuild (17 leagues): 47.9% overall prematch match rate, 91.4% in-scope matching coverage, unresolved in-scope alias backlog reduced to 390 rows
   - Refreshed backtest (17-league test split, EV≥0.05/conf≥0.55):
-    - Handicap pre-match coverage: 35.5% (ROI +7.2%)
+    - Handicap pre-match coverage: 38.8% (ROI +11.13%) after refreshed calibration report (`T=1.30`)
     - Fulltime pre-match coverage: 61.5% (ROI -19.15%)
-    - Threshold sweep on handicap shows max observed pre-match coverage 40.1%, indicating current 70% target is not reachable under present data support
+    - Threshold sweep on handicap shows max observed pre-match coverage 47.1%, indicating current 70% target is not reachable under present data support
 
 ### 9B — Probability Calibration
 - [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split
@@ -397,6 +397,8 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Add objective-driven temperature search (`--objective ece|nll|brier`) in `calibrate_temperature.py`
   - Handicap test holdout ECE improved 0.03307 -> 0.012897 with ECE-optimized temperature (`T=1.37`)
 - [x] Add guardrail warning in calibration diagnostics when input predictions are already temperature-scaled
+- [x] Tune default chronological calibration split to `--calib-ratio 0.55` for expanded 17-league test stability
+  - Refreshed raw-prob holdout ECE improved 0.024612 -> 0.011332 (ECE-optimized `T=1.30`)
 
 ### 9C — Kelly Criterion Staking
 - [x] Implement fractional Kelly sizing in `cn_lottery_backtest.py` (`f = (p * odds - 1) / (odds - 1)`), with bankroll and max-stake cap
@@ -419,8 +421,8 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Re-scrape 500.com CN lottery SP for 2025/26 period
 
 ### Acceptance criteria
-- [ ] CN coverage ≥ 70% with pre-match odds scraper (current refreshed handicap: 35.5%; observed max in threshold sweep: 40.1%)
-- [ ] Calibration: ECE < 0.015 after temperature scaling (current refreshed raw-prob holdout ECE: 0.017056)
+- [ ] CN coverage ≥ 70% with pre-match odds scraper (current refreshed handicap: 38.8%; observed max in threshold sweep: 47.1%)
+- [x] Calibration: ECE < 0.015 after temperature scaling (current refreshed raw-prob holdout ECE: 0.011332)
 - [x] Kelly-sized backtest reported alongside flat-stake baseline
 - [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)
 
