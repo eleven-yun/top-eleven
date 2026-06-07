@@ -114,6 +114,7 @@ def simulate(
     kelly_min_stake: float = 2.0,
     kelly_max_stake_pct: float = 0.05,
     acceptance_mode: str = "raw",
+    acceptance_target: float = 70.0,
 ) -> dict:
     """Run the simulation and return stats for EU, CN SP, CN+EU fallback, and pre-match odds."""
     play_type = TASK_PLAY_TYPE[task]
@@ -343,10 +344,10 @@ def simulate(
         "kelly_profit": round(kelly_bankroll - bankroll, 2),
         "kelly_roi_pct": round((kelly_bankroll - bankroll) / bankroll * 100, 2) if bankroll > 0 else 0,
         "kelly_max_drawdown_pct": round(kelly_max_drawdown_pct, 2),
-        "acceptance_target_coverage_pct": 70.0,
+        "acceptance_target_coverage_pct": acceptance_target,
         "acceptance_mode": acceptance_mode,
         "acceptance_selected_coverage_pct": selected_acceptance_cov_pct,
-        "acceptance_selected_pass": selected_acceptance_cov_pct >= 70.0,
+        "acceptance_selected_pass": selected_acceptance_cov_pct >= acceptance_target,
         "acceptance_coverage": {
             "cn": {
                 "raw": {
@@ -431,6 +432,12 @@ def main():
         choices=["raw", "supported_universe"],
         help="Denominator used for canonical prematch acceptance verdict",
     )
+    parser.add_argument(
+        "--acceptance-target",
+        type=float,
+        default=70.0,
+        help="Coverage target percentage used for PASS/FAIL acceptance verdicts",
+    )
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
 
@@ -506,6 +513,7 @@ def main():
         kelly_min_stake=args.kelly_min_stake,
         kelly_max_stake_pct=args.kelly_max_stake_pct,
         acceptance_mode=args.acceptance_mode,
+        acceptance_target=args.acceptance_target,
     )
 
     print("\n" + "=" * 60)
