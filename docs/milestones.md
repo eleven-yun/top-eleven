@@ -392,6 +392,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
     - Added canonical `acceptance_coverage` block in backtest JSON outputs for dashboard ingestion (`raw` and `supported_universe` denominators with explicit `covered`/`bets`/`coverage_pct`)
     - Added `--acceptance-mode {raw,supported_universe}` in `cn_lottery_backtest.py` to emit one canonical prematch acceptance PASS/FAIL verdict in CLI/JSON
     - Added `--acceptance-target` in `cn_lottery_backtest.py` to configure policy threshold without code edits (default 70.0)
+    - Added `scripts/generate_acceptance_report.py` to produce one consolidated CI/nightly acceptance artifact (`output/backtest/acceptance_report.json`) across handicap/fulltime tasks
     - Threshold sweep on handicap shows max observed pre-match coverage 47.1%, indicating current 70% target is not reachable under present data support
 
 ### 9B — Probability Calibration
