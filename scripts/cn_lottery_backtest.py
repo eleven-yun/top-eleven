@@ -113,6 +113,7 @@ def simulate(
     bankroll: float = 10000.0,
     kelly_min_stake: float = 2.0,
     kelly_max_stake_pct: float = 0.05,
+    acceptance_mode: str = "raw",
 ) -> dict:
     """Run the simulation and return stats for EU, CN SP, CN+EU fallback, and pre-match odds."""
     play_type = TASK_PLAY_TYPE[task]
@@ -278,6 +279,17 @@ def simulate(
     cn_fallback_staked = cn_fallback_bets * stake
     prematch_staked = prematch_bets * stake
 
+    prematch_raw_cov_pct = round(prematch_covered / prematch_bets * 100, 1) if prematch_bets > 0 else 0
+    prematch_supported_cov_pct = (
+        round(prematch_supported_universe_covered / prematch_supported_universe_bets * 100, 1)
+        if prematch_supported_universe_bets > 0
+        else 0
+    )
+    if acceptance_mode == "supported_universe":
+        selected_acceptance_cov_pct = prematch_supported_cov_pct
+    else:
+        selected_acceptance_cov_pct = prematch_raw_cov_pct
+
     return {
         "total_predictions": n_total,
         "ev_filtered_predictions": n_ev_filtered,
@@ -304,14 +316,10 @@ def simulate(
         else 0,
         "prematch_bets": int(prematch_bets),
         "prematch_covered": prematch_covered,
-        "prematch_coverage_pct": round(prematch_covered / prematch_bets * 100, 1) if prematch_bets > 0 else 0,
+        "prematch_coverage_pct": prematch_raw_cov_pct,
         "prematch_supported_universe_bets": prematch_supported_universe_bets,
         "prematch_supported_universe_covered": prematch_supported_universe_covered,
-        "prematch_supported_universe_coverage_pct": round(
-            prematch_supported_universe_covered / prematch_supported_universe_bets * 100, 1
-        )
-        if prematch_supported_universe_bets > 0
-        else 0,
+        "prematch_supported_universe_coverage_pct": prematch_supported_cov_pct,
         "prematch_profit": round(prematch_profit, 2),
         "prematch_staked": round(prematch_staked, 2),
         "prematch_roi_pct": round(prematch_profit / prematch_staked * 100, 2) if prematch_staked > 0 else 0,
@@ -336,6 +344,9 @@ def simulate(
         "kelly_roi_pct": round((kelly_bankroll - bankroll) / bankroll * 100, 2) if bankroll > 0 else 0,
         "kelly_max_drawdown_pct": round(kelly_max_drawdown_pct, 2),
         "acceptance_target_coverage_pct": 70.0,
+        "acceptance_mode": acceptance_mode,
+        "acceptance_selected_coverage_pct": selected_acceptance_cov_pct,
+        "acceptance_selected_pass": selected_acceptance_cov_pct >= 70.0,
         "acceptance_coverage": {
             "cn": {
                 "raw": {
@@ -414,6 +425,12 @@ def main():
         default=0.05,
         help="Cap Kelly stake as fraction of bankroll per bet (e.g., 0.05 = 5%%)",
     )
+    parser.add_argument(
+        "--acceptance-mode",
+        default="raw",
+        choices=["raw", "supported_universe"],
+        help="Denominator used for canonical prematch acceptance verdict",
+    )
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
 
@@ -488,6 +505,7 @@ def main():
         bankroll=args.bankroll,
         kelly_min_stake=args.kelly_min_stake,
         kelly_max_stake_pct=args.kelly_max_stake_pct,
+        acceptance_mode=args.acceptance_mode,
     )
 
     print("\n" + "=" * 60)
@@ -538,6 +556,13 @@ def main():
     print(
         f"  Prematch raw {prematch_raw_cov:.1f}% [{pass_fail(prematch_raw_cov)}] | "
         f"Prematch supported {prematch_supported_cov:.1f}% [{pass_fail(prematch_supported_cov)}]"
+    )
+    selected_cov = results.get("acceptance_selected_coverage_pct", 0.0)
+    selected_pass = results.get("acceptance_selected_pass", False)
+    selected_mode = results.get("acceptance_mode", "raw")
+    print(
+        f"  Canonical prematch acceptance ({selected_mode}): "
+        f"{selected_cov:.1f}% [{'PASS' if selected_pass else 'FAIL'}]"
     )
     if results.get("kelly_enabled"):
         print("-" * 60)
