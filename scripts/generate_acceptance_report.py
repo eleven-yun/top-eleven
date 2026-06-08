@@ -7,6 +7,7 @@ artifact with per-task results plus an overall acceptance verdict.
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from cn_lottery_backtest import (
@@ -35,6 +36,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--stake", type=float, default=2.0)
     parser.add_argument("--acceptance-mode", choices=["raw", "supported_universe"], default="raw")
     parser.add_argument("--acceptance-target", type=float, default=70.0)
+    parser.add_argument(
+        "--fail-on-overall-fail",
+        action="store_true",
+        help="Exit with code 1 when consolidated overall_pass is false",
+    )
     parser.add_argument("--output", default="output/backtest/acceptance_report.json")
     return parser.parse_args()
 
@@ -128,6 +134,9 @@ def main() -> None:
 
     print(f"Wrote acceptance report to {out_path}")
     print(f"Overall acceptance: {'PASS' if overall_pass else 'FAIL'}")
+    if args.fail_on_overall_fail and not overall_pass:
+        print("Exiting with code 1 because overall acceptance is FAIL")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

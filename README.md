@@ -114,6 +114,21 @@ Results (LightGBM 46-feat, European odds proxy):
 | Handicap 1X2 | EV≥0.05, conf≥0.55 | +9.7% | **+4.3%** | 1216 |
 | Fulltime 1X2 | any | negative | negative | — |
 
+## Phase 9 Acceptance Gate
+
+Generate a consolidated acceptance report for handicap/fulltime and fail fast when
+the configured acceptance threshold is not met:
+
+```bash
+conda activate top-eleven
+python scripts/generate_acceptance_report.py \
+    --acceptance-mode supported_universe \
+    --acceptance-target 70 \
+    --fail-on-overall-fail
+```
+
+Output artifact: `output/backtest/acceptance_report.json`
+
 ---
 
 ## Environment Setup (Conda Only)
