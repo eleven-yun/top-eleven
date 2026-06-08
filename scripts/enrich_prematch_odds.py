@@ -387,8 +387,8 @@ def main():
     parser.add_argument(
         "--min-score",
         type=float,
-        default=0.50,
-        help="Minimum matching score threshold",
+        default=0.45,
+        help="Minimum matching score threshold (tuned default)",
     )
     parser.add_argument(
         "--dry-run",
