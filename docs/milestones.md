@@ -394,12 +394,12 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
     - Added `--acceptance-target` in `cn_lottery_backtest.py` to configure policy threshold without code edits (default 70.0)
     - Added `scripts/generate_acceptance_report.py` to produce one consolidated CI/nightly acceptance artifact (`output/backtest/acceptance_report.json`) across handicap/fulltime tasks
     - Threshold sweep on handicap shows max observed pre-match coverage 47.1%, indicating current 70% target is not reachable under present data support
-    - Tuned prematch matcher default threshold to `--min-score 0.45` (from 0.50) and added high-frequency Dutch/Portuguese aliases (`config/team_alias_cn.json`):
-      - Enriched prematch rows: 8532 -> 8992
-      - In-scope match rate: 91.4% -> 98.8%
-      - Unresolved in-scope alias backlog: 390 -> 30
-      - Handicap pre-match coverage (EV>=0.05/conf>=0.55): 38.8% -> 40.8%
-      - Handicap supported-universe pre-match coverage: 57.1% -> 60.1%
+    - Tuned prematch matcher default threshold to `--min-score 0.45` (from 0.50) and added targeted Dutch/Portuguese/League One aliases (`config/team_alias_cn.json`):
+      - Enriched prematch rows: 8532 -> 9030
+      - In-scope match rate: 91.4% -> 99.2%
+      - Unresolved in-scope alias backlog: 390 -> 7 (all non-actionable under current canonical roster)
+      - Handicap pre-match coverage (EV>=0.05/conf>=0.55): 38.8% -> 41.3%
+      - Handicap supported-universe pre-match coverage: 57.1% -> 60.8%
 
 ### 9B — Probability Calibration
 - [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split
@@ -434,8 +434,8 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [x] Re-scrape 500.com CN lottery SP for 2025/26 period
 
 ### Acceptance criteria
-- [ ] CN coverage ≥ 70% with pre-match odds scraper (current refreshed handicap: 40.8%; observed max in threshold sweep: 47.1%)
-- [ ] CN coverage ≥ 70% with pre-match odds scraper (raw denominator currently not met; supported-universe denominator reached 72.7% on fulltime but 60.1% on handicap)
+- [ ] CN coverage ≥ 70% with pre-match odds scraper (current refreshed handicap: 41.3%; observed max in threshold sweep: 47.1%)
+- [ ] CN coverage ≥ 70% with pre-match odds scraper (raw denominator currently not met; supported-universe denominator reached 72.7% on fulltime but 60.8% on handicap)
 - [x] Calibration: ECE < 0.015 after temperature scaling (current refreshed raw-prob holdout ECE: 0.011332)
 - [x] Kelly-sized backtest reported alongside flat-stake baseline
 - [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)

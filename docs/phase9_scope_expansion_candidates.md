@@ -7,13 +7,13 @@ This note captures the largest out-of-scope league buckets from
 
 - Out-of-scope rows: 8254 (after scope expansion batch-2 + alias refresh)
 - Out-of-scope share: 47.60% (down from 55.55%)
-- Current pre-match coverage on refreshed 2025/26 handicap test (EV>=0.05, conf>=0.55): 40.8%
+- Current pre-match coverage on refreshed 2025/26 handicap test (EV>=0.05, conf>=0.55): 41.3%
 - Phase 9 acceptance target: >= 70% pre-match CN coverage
 - Current in-scope rows under expanded config: 9100 (up from 7713)
-- Current in-scope matching coverage: 98.8%
-- Current in-scope unresolved alias backlog: 30 rows
+- Current in-scope matching coverage: 99.2%
+- Current in-scope unresolved alias backlog: 7 rows (all non-actionable under current canonical roster)
 - Current observed max handicap pre-match coverage in threshold sweep: 47.1%
-- Current supported-universe pre-match coverage (EV>=0.05, conf>=0.55): 60.1% handicap / 72.7% fulltime
+- Current supported-universe pre-match coverage (EV>=0.05, conf>=0.55): 60.8% handicap / 72.7% fulltime
 
 ## Top Candidate Competitions
 
