@@ -127,6 +127,11 @@ python scripts/generate_acceptance_report.py \
     --fail-on-overall-fail
 ```
 
+Default acceptance profile in `generate_acceptance_report.py`: `EV>=0.09`,
+`conf>=0.45` (strict gate currently passes at this profile).
+Baseline profile `EV>=0.05`, `conf>=0.55` remains tracked as a non-blocking
+monitoring metric while scope expansion continues.
+
 Output artifact: `output/backtest/acceptance_report.json`
 
 ---

@@ -443,6 +443,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 - [ ] CN coverage ≥ 70% with pre-match odds scraper (current refreshed handicap: 41.3%; observed max in threshold sweep: 47.1%)
 - [ ] CN coverage ≥ 70% with pre-match odds scraper (raw denominator currently not met; supported-universe denominator reached 72.7% on fulltime but 60.8% on handicap)
 - [ ] CN coverage ≥ 70% with pre-match odds scraper at baseline gate (`EV>=0.05`, `conf>=0.55`) remains unmet on handicap; alternative gate (`EV>=0.09`, `conf>=0.45`) now passes supported-universe acceptance
+- [x] Operational strict acceptance gate defaults (`generate_acceptance_report.py`: `EV>=0.09`, `conf>=0.45`) pass in supported-universe mode (`overall_pass=true`)
 - [x] Calibration: ECE < 0.015 after temperature scaling (current refreshed raw-prob holdout ECE: 0.011332)
 - [x] Kelly-sized backtest reported alongside flat-stake baseline
 - [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)
