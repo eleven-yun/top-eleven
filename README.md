@@ -153,6 +153,8 @@ also be triggered manually:
 - Workflow file: `.github/workflows/acceptance-nightly.yml`
 - Schedule: daily at 02:15 UTC
 - Manual run: Actions -> "Phase9 Acceptance Nightly" -> "Run workflow"
+- Prerequisites on runner: processed market files and prediction JSONL artifacts
+    must exist under `data/processed/` and `output/predictions/`
 - Uploaded artifacts per run:
     - `acceptance_report_operational.json`
     - `acceptance_report_baseline.json`

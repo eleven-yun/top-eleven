@@ -25,6 +25,30 @@ jobs:
 
       - name: Run dual-profile acceptance check
         shell: bash -l {0}
+        run: |
+          required=(
+            "data/processed/match_meta.jsonl"
+            "data/processed/lottery_market.jsonl"
+            "data/processed/lottery_market_cn.jsonl"
+            "data/processed/lottery_market_prematch_cn.jsonl"
+            "output/predictions/handicap_label_test.jsonl"
+            "output/predictions/fulltime_label_test.jsonl"
+          )
+          missing=0
+          for f in "${required[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              echo "Missing required artifact: $f"
+              missing=1
+            fi
+          done
+          if [[ $missing -ne 0 ]]; then
+            echo "Acceptance workflow prerequisites are missing on this runner."
+            echo "Generate/upload processed markets and prediction JSONL artifacts before this job."
+            exit 1
+          fi
+
+      - name: Execute dual-profile acceptance script
+        shell: bash -l {0}
         run: bash scripts/run_acceptance_dual_profile.sh
 
       - name: Upload acceptance artifacts
