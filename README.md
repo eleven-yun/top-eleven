@@ -134,6 +134,17 @@ monitoring metric while scope expansion continues.
 
 Output artifact: `output/backtest/acceptance_report.json`
 
+Run both profiles together (blocking operational gate + non-blocking baseline monitor):
+
+```bash
+conda activate top-eleven
+bash scripts/run_acceptance_dual_profile.sh
+```
+
+Dual-profile artifacts:
+- `output/backtest/acceptance_report_operational.json`
+- `output/backtest/acceptance_report_baseline.json`
+
 ---
 
 ## Environment Setup (Conda Only)
