@@ -32,6 +32,9 @@ def run_grid(
     eu_index: dict,
     cn_index: dict,
     prematch_index: dict,
+    match_to_league_code: dict,
+    cn_supported_leagues: set,
+    prematch_supported_leagues: set,
     task: str,
     ev_values: list[float],
     conf_values: list[float],
@@ -46,6 +49,9 @@ def run_grid(
                 eu_index=eu_index,
                 cn_index=cn_index,
                 prematch_index=prematch_index,
+                match_to_league_code=match_to_league_code,
+                cn_supported_leagues=cn_supported_leagues,
+                prematch_supported_leagues=prematch_supported_leagues,
                 task=task,
                 ev_threshold=ev,
                 min_confidence=conf,
@@ -63,6 +69,9 @@ def run_grid(
                     "prematch_roi_pct": res["prematch_roi_pct"],
                     "prematch_profit": res["prematch_profit"],
                     "prematch_coverage_pct": res["prematch_coverage_pct"],
+                    "prematch_supported_universe_coverage_pct": res[
+                        "prematch_supported_universe_coverage_pct"
+                    ],
                     "cn_roi_pct": res["cn_roi_pct"],
                     "eu_roi_pct": res["eu_roi_pct"],
                     "risk_adjusted_score": round(score, 4),
@@ -78,6 +87,7 @@ def main() -> None:
     parser.add_argument("--eu-market", default="data/processed/lottery_market.jsonl")
     parser.add_argument("--cn-market", default="data/processed/lottery_market_cn.jsonl")
     parser.add_argument("--prematch-market", default="data/processed/lottery_market_prematch_cn.jsonl")
+    parser.add_argument("--match-meta", default="data/processed/match_meta.jsonl")
     parser.add_argument("--ev-start", type=float, default=0.02)
     parser.add_argument("--ev-stop", type=float, default=0.16)
     parser.add_argument("--ev-step", type=float, default=0.01)
@@ -106,11 +116,29 @@ def main() -> None:
         if not Path(args.prematch_market).is_absolute()
         else Path(args.prematch_market)
     )
+    meta_path = root / args.match_meta if not Path(args.match_meta).is_absolute() else Path(args.match_meta)
 
     predictions = load_jsonl(str(pred_path))
     eu_index = build_market_index(load_jsonl(str(eu_path)), TASK_PLAY_TYPE[args.task])
     cn_index = build_market_index(load_jsonl(str(cn_path)), TASK_PLAY_TYPE[args.task])
     prematch_index = build_prematch_index(load_jsonl(str(prematch_path)), TASK_PLAY_TYPE[args.task])
+
+    match_to_league_code = {}
+    cn_supported_leagues = set()
+    prematch_supported_leagues = set()
+    if meta_path.exists():
+        meta_rows = load_jsonl(str(meta_path))
+        match_to_league_code = {
+            row.get("match_id"): (row.get("league_code") or "").lower()
+            for row in meta_rows
+            if row.get("match_id")
+        }
+        cn_supported_leagues = {
+            match_to_league_code[mid] for mid in cn_index if match_to_league_code.get(mid)
+        }
+        prematch_supported_leagues = {
+            match_to_league_code[mid] for mid in prematch_index if match_to_league_code.get(mid)
+        }
 
     ev_values = frange(args.ev_start, args.ev_stop, args.ev_step)
     conf_values = frange(args.conf_start, args.conf_stop, args.conf_step)
@@ -120,6 +148,9 @@ def main() -> None:
         eu_index=eu_index,
         cn_index=cn_index,
         prematch_index=prematch_index,
+        match_to_league_code=match_to_league_code,
+        cn_supported_leagues=cn_supported_leagues,
+        prematch_supported_leagues=prematch_supported_leagues,
         task=args.task,
         ev_values=ev_values,
         conf_values=conf_values,
@@ -137,7 +168,8 @@ def main() -> None:
         print(
             f"  EV>={r['ev_threshold']:.2f}, conf>={r['min_confidence']:.2f} | "
             f"bets={r['prematch_bets']} roi={r['prematch_roi_pct']:+.2f}% "
-            f"profit={r['prematch_profit']:+.2f} coverage={r['prematch_coverage_pct']:.1f}%"
+            f"profit={r['prematch_profit']:+.2f} coverage={r['prematch_coverage_pct']:.1f}% "
+            f"supported={r['prematch_supported_universe_coverage_pct']:.1f}%"
         )
 
     print("\nTop 5 by pre-match ROI:")

@@ -14,6 +14,8 @@ This note captures the largest out-of-scope league buckets from
 - Current in-scope unresolved alias backlog: 7 rows (all non-actionable under current canonical roster)
 - Current observed max handicap pre-match coverage in threshold sweep: 47.1%
 - Current supported-universe pre-match coverage (EV>=0.05, conf>=0.55): 60.8% handicap / 72.7% fulltime
+- Alternative acceptance-feasible profile (current data, no new leagues): EV>=0.09 + conf>=0.45 gives 70.3% handicap supported coverage (204 bets)
+- Candidate league-code probe result in current environment: no usable CSVs returned for JPN1 / USA1 / SW1 / NOR1 / KOR1 across 2019/20-2025/26
 
 ## Top Candidate Competitions
 
@@ -44,3 +46,4 @@ Ranked by share of out-of-scope rows in current pre-match scrape:
 
 - This file is intentionally data-driven and should be refreshed after each scrape window refresh.
 - Keep `config/data_config.json` updates incremental (batch of 2-4 competitions) to isolate coverage impact.
+- If code probes keep returning empty for top out-of-scope leagues, next uplift path should prioritize integrating an alternate data provider for those competitions.

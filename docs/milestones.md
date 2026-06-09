@@ -400,6 +400,12 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
       - Unresolved in-scope alias backlog: 390 -> 7 (all non-actionable under current canonical roster)
       - Handicap pre-match coverage (EV>=0.05/conf>=0.55): 38.8% -> 41.3%
       - Handicap supported-universe pre-match coverage: 57.1% -> 60.8%
+    - Fixed `scripts/optimize_cn_strategy.py` compatibility with latest `simulate(...)` signature (supported-universe arguments) and restored optimizer output generation
+    - Acceptance-feasible threshold profile validated under current dataset support:
+      - `ev>=0.09`, `conf>=0.45` -> strict consolidated acceptance PASS (`overall_pass=true`)
+      - Handicap supported-universe coverage: 70.3% (204 bets)
+      - Fulltime supported-universe coverage: 88.9% (17 bets)
+    - Scope expansion blocker: candidate league-code probe for `JPN1/USA1/SW1/NOR1/KOR1` returned no usable CSVs across 2019/20-2025/26 in current environment
 
 ### 9B — Probability Calibration
 - [x] Implement temperature-scaling diagnostics (`calibrate_temperature.py`) with chronological calib/holdout split
@@ -436,6 +442,7 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
 ### Acceptance criteria
 - [ ] CN coverage ≥ 70% with pre-match odds scraper (current refreshed handicap: 41.3%; observed max in threshold sweep: 47.1%)
 - [ ] CN coverage ≥ 70% with pre-match odds scraper (raw denominator currently not met; supported-universe denominator reached 72.7% on fulltime but 60.8% on handicap)
+- [ ] CN coverage ≥ 70% with pre-match odds scraper at baseline gate (`EV>=0.05`, `conf>=0.55`) remains unmet on handicap; alternative gate (`EV>=0.09`, `conf>=0.45`) now passes supported-universe acceptance
 - [x] Calibration: ECE < 0.015 after temperature scaling (current refreshed raw-prob holdout ECE: 0.011332)
 - [x] Kelly-sized backtest reported alongside flat-stake baseline
 - [x] 2025/26 test ROI positive (confirms edge is not 2024/25-specific)
