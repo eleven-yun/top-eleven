@@ -408,6 +408,9 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
     - Added `scripts/run_acceptance_dual_profile.sh` to run both gates in one command:
       - Blocking operational gate (`ev>=0.09`, `conf>=0.45`)
       - Non-blocking baseline monitor (`ev>=0.05`, `conf>=0.55`)
+    - Added GitHub Actions workflow `.github/workflows/acceptance-nightly.yml`:
+      - Nightly schedule (02:15 UTC) + manual trigger
+      - Runs dual-profile acceptance script and uploads both JSON artifacts
     - Scope expansion blocker: candidate league-code probe for `JPN1/USA1/SW1/NOR1/KOR1` returned no usable CSVs across 2019/20-2025/26 in current environment
 
 ### 9B — Probability Calibration

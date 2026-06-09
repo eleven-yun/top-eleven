@@ -145,6 +145,18 @@ Dual-profile artifacts:
 - `output/backtest/acceptance_report_operational.json`
 - `output/backtest/acceptance_report_baseline.json`
 
+### GitHub Nightly CI
+
+A GitHub Actions workflow runs the dual-profile acceptance check nightly and can
+also be triggered manually:
+
+- Workflow file: `.github/workflows/acceptance-nightly.yml`
+- Schedule: daily at 02:15 UTC
+- Manual run: Actions -> "Phase9 Acceptance Nightly" -> "Run workflow"
+- Uploaded artifacts per run:
+    - `acceptance_report_operational.json`
+    - `acceptance_report_baseline.json`
+
 ---
 
 ## Environment Setup (Conda Only)

@@ -1,0 +1,38 @@
+name: Phase9 Acceptance Nightly
+
+on:
+  schedule:
+    # 02:15 UTC every day
+    - cron: '15 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  acceptance-dual-profile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          activate-environment: top-eleven
+          environment-file: environment.yml
+          auto-activate-base: false
+          miniforge-variant: Miniforge3
+
+      - name: Run dual-profile acceptance check
+        shell: bash -l {0}
+        run: bash scripts/run_acceptance_dual_profile.sh
+
+      - name: Upload acceptance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-dual-profile-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            output/backtest/acceptance_report_operational.json
+            output/backtest/acceptance_report_baseline.json
