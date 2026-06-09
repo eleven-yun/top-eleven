@@ -145,6 +145,39 @@ Dual-profile artifacts:
 - `output/backtest/acceptance_report_operational.json`
 - `output/backtest/acceptance_report_baseline.json`
 
+### Optional Source-B Odds Integration (Coverage Uplift)
+
+If a second pre-match odds source is available, convert it to canonical schema,
+merge with the existing 500.com feed, then run enrichment on the merged file.
+
+```bash
+conda activate top-eleven
+
+# 1) Convert source-B export into canonical prematch JSONL schema
+python scripts/convert_source_b_prematch_odds.py \
+    --input data/raw/source_b/prematch.csv \
+    --input-format csv \
+    --id-col match_id \
+    --kickoff-col kickoff_utc \
+    --league-col league \
+    --home-col home_team \
+    --away-col away_team \
+    --play-type-col market \
+    --opening-win-col open_home --opening-draw-col open_draw --opening-lost-col open_away \
+    --closing-win-col close_home --closing-draw-col close_draw --closing-lost-col close_away
+
+# 2) Merge source-A + source-B raw prematch odds
+python scripts/merge_prematch_odds_sources.py \
+    --input data/raw/china_lottery/prematch_odds_raw.jsonl \
+    --input data/raw/china_lottery/prematch_odds_source_b_raw.jsonl \
+    --output data/raw/china_lottery/prematch_odds_raw_merged.jsonl \
+    --prefer-source 500.com,source_b
+
+# 3) Enrich from merged raw file
+python scripts/enrich_prematch_odds.py \
+    --odds-file data/raw/china_lottery/prematch_odds_raw_merged.jsonl
+```
+
 ### GitHub Nightly CI
 
 A GitHub Actions workflow runs the dual-profile acceptance check nightly and can

@@ -412,6 +412,9 @@ Best threshold (EV≥0.08): EU +4.64% / CN+EU fallback +7.60% ROI on 984 bets.
       - Nightly schedule (02:15 UTC) + manual trigger
       - Restores cached artifacts, rebuilds required data/predictions, runs dual-profile acceptance, uploads both JSON artifacts
       - Cold-start bootstrap window set to 2025-08-01; warm-cache runs perform incremental 2-day odds refresh
+    - Added source-B integration tooling for coverage uplift:
+      - `scripts/convert_source_b_prematch_odds.py` (normalize external source export -> canonical prematch schema)
+      - `scripts/merge_prematch_odds_sources.py` (merge/deduplicate source-A + source-B before enrichment)
     - Scope expansion blocker: candidate league-code probe for `JPN1/USA1/SW1/NOR1/KOR1` returned no usable CSVs across 2019/20-2025/26 in current environment
 
 ### 9B — Probability Calibration
