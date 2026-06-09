@@ -5,6 +5,12 @@ on:
     # 02:15 UTC every day
     - cron: '15 2 * * *'
   workflow_dispatch:
+    inputs:
+      source_b_canonical_path:
+        description: "Optional canonical Source-B JSONL path"
+        required: false
+        default: data/raw/china_lottery/prematch_odds_source_b_raw.jsonl
+        type: string
 
 jobs:
   acceptance-dual-profile:
@@ -31,12 +37,15 @@ jobs:
             acceptance-inputs-${{ runner.os }}-${{ github.ref_name }}-
           path: |
             data/raw/china_lottery
+            data/raw/source_b
             data/raw/football_data_co_uk
             data/processed
             output/predictions
 
       - name: Build dataset and refresh CN odds inputs
         shell: bash -l {0}
+        env:
+          SOURCE_B_CANONICAL_PATH: ${{ inputs.source_b_canonical_path || 'data/raw/china_lottery/prematch_odds_source_b_raw.jsonl' }}
         run: |
           set -euo pipefail
 
@@ -77,7 +86,21 @@ jobs:
             ${prematch_append}
 
           conda run -n top-eleven python scripts/enrich_lottery_odds.py --min-score 0.45
-          conda run -n top-eleven python scripts/enrich_prematch_odds.py
+
+          if [[ -f "${SOURCE_B_CANONICAL_PATH}" ]]; then
+            echo "Source-B canonical file detected: ${SOURCE_B_CANONICAL_PATH}"
+            conda run -n top-eleven python scripts/merge_prematch_odds_sources.py \
+              --input data/raw/china_lottery/prematch_odds_raw.jsonl \
+              --input "${SOURCE_B_CANONICAL_PATH}" \
+              --output data/raw/china_lottery/prematch_odds_raw_merged.jsonl \
+              --prefer-source 500.com,source_b
+
+            conda run -n top-eleven python scripts/enrich_prematch_odds.py \
+              --odds-file data/raw/china_lottery/prematch_odds_raw_merged.jsonl
+          else
+            echo "No Source-B canonical file found; using Source-A prematch only."
+            conda run -n top-eleven python scripts/enrich_prematch_odds.py
+          fi
 
       - name: Generate test predictions
         shell: bash -l {0}

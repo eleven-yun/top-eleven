@@ -193,6 +193,12 @@ also be triggered manually:
     - executes dual-profile acceptance checks
 - It uses GitHub Actions cache to reuse `data/raw/`, `data/processed/`, and
     `output/predictions/` artifacts and performs incremental odds refresh on warm cache
+- Optional Source-B path in CI:
+    - if a canonical Source-B file exists (default path:
+        `data/raw/china_lottery/prematch_odds_source_b_raw.jsonl`), workflow merges
+        Source-A + Source-B before pre-match enrichment
+    - otherwise workflow falls back to Source-A only
+    - manual workflow runs can override this path via `source_b_canonical_path`
 - Uploaded artifacts per run:
     - `acceptance_report_operational.json`
     - `acceptance_report_baseline.json`
