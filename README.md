@@ -153,8 +153,13 @@ also be triggered manually:
 - Workflow file: `.github/workflows/acceptance-nightly.yml`
 - Schedule: daily at 02:15 UTC
 - Manual run: Actions -> "Phase9 Acceptance Nightly" -> "Run workflow"
-- Prerequisites on runner: processed market files and prediction JSONL artifacts
-    must exist under `data/processed/` and `output/predictions/`
+- The workflow now prepares prerequisites end-to-end on runner:
+    - builds dataset (`data/build_dataset.py`)
+    - refreshes CN odds + pre-match odds and runs enrichment
+    - regenerates test predictions for handicap/fulltime
+    - executes dual-profile acceptance checks
+- It uses GitHub Actions cache to reuse `data/raw/`, `data/processed/`, and
+    `output/predictions/` artifacts and performs incremental odds refresh on warm cache
 - Uploaded artifacts per run:
     - `acceptance_report_operational.json`
     - `acceptance_report_baseline.json`

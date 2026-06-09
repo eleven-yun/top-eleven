@@ -9,7 +9,7 @@ on:
 jobs:
   acceptance-dual-profile:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 240
 
     steps:
       - name: Checkout
@@ -23,7 +23,70 @@ jobs:
           auto-activate-base: false
           miniforge-variant: Miniforge3
 
-      - name: Run dual-profile acceptance check
+      - name: Restore cached data artifacts
+        uses: actions/cache@v4
+        with:
+          key: acceptance-inputs-${{ runner.os }}-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: |
+            acceptance-inputs-${{ runner.os }}-${{ github.ref_name }}-
+          path: |
+            data/raw/china_lottery
+            data/raw/football_data_co_uk
+            data/processed
+            output/predictions
+
+      - name: Build dataset and refresh CN odds inputs
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+
+          mkdir -p data/raw/china_lottery data/processed output/predictions
+
+          # Always refresh core football dataset artifacts.
+          conda run -n top-eleven python data/build_dataset.py --config config/data_config.json
+
+          end_date="$(date -u +%F)"
+
+          # Bootstrap from 2025/26 season start when cache is cold; otherwise incremental append.
+          if [[ -f data/raw/china_lottery/odds_raw.jsonl ]]; then
+            cn_start="$(date -u -d '2 days ago' +%F)"
+            cn_append="--append"
+          else
+            cn_start="2025-08-01"
+            cn_append=""
+          fi
+
+          if [[ -f data/raw/china_lottery/prematch_odds_raw.jsonl ]]; then
+            prematch_start="$(date -u -d '2 days ago' +%F)"
+            prematch_append="--append"
+          else
+            prematch_start="2025-08-01"
+            prematch_append=""
+          fi
+
+          conda run -n top-eleven python scripts/fetch_cn_odds.py \
+            --start "${cn_start}" \
+            --end "${end_date}" \
+            --delay 0.4 \
+            ${cn_append}
+
+          conda run -n top-eleven python scripts/fetch_cn_prematch_odds.py \
+            --start "${prematch_start}" \
+            --end "${end_date}" \
+            --delay 0.2 \
+            ${prematch_append}
+
+          conda run -n top-eleven python scripts/enrich_lottery_odds.py --min-score 0.45
+          conda run -n top-eleven python scripts/enrich_prematch_odds.py
+
+      - name: Generate test predictions
+        shell: bash -l {0}
+        run: |
+          set -euo pipefail
+          conda run -n top-eleven python scripts/predict_lgbm.py --task handicap_label --split test
+          conda run -n top-eleven python scripts/predict_lgbm.py --task fulltime_label --split test
+
+      - name: Preflight acceptance inputs
         shell: bash -l {0}
         run: |
           required=(
